@@ -4,6 +4,7 @@ from aura.ai.providers.base import AIProvider
 from aura.ai.providers.dummy_provider import DummyProvider
 from aura.ai.tool_call import ToolCall
 from aura.ai.tool_runner import ToolRunner
+from aura.brain.brain import Brain
 from aura.context.builder import ContextBuilder
 from aura.core.ai_events import (
     AIResponseCompleted,
@@ -548,3 +549,19 @@ def test_ai_manager_injects_identity_context():
     )
 
     assert result == "identity bulundu"
+
+
+def test_ai_manager_accepts_brain() -> None:
+    registry = ToolRegistry()
+
+    brain = Brain()
+
+    manager = AIManager(
+        DummyProvider(),
+        Session(InMemoryMemory()),
+        registry,
+        ToolRunner(registry),
+        brain=brain,
+    )
+
+    assert manager.brain is brain

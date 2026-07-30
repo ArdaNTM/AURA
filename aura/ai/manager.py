@@ -7,6 +7,7 @@ from typing import Any
 from aura.ai.providers.base import AIProvider
 from aura.ai.tool_call import ToolCall
 from aura.ai.tool_runner import ToolRunner
+from aura.brain.brain import Brain
 from aura.context.builder import ContextBuilder
 from aura.core.ai_events import (
     AIResponseCompleted,
@@ -33,6 +34,7 @@ class AIManager:
         max_tool_calls: int = 5,
         event_bus: EventBus | None = None,
         context_builder: ContextBuilder | None = None,
+        brain: Brain | None = None,
     ) -> None:
         self._provider = provider
         self._session = session
@@ -41,6 +43,7 @@ class AIManager:
         self._max_tool_calls = max_tool_calls
         self._event_bus = event_bus
         self._context_builder = context_builder
+        self._brain = brain
 
     @property
     def provider(self) -> AIProvider:
@@ -61,6 +64,10 @@ class AIManager:
     @property
     def max_tool_calls(self) -> int:
         return self._max_tool_calls
+
+    @property
+    def brain(self) -> Brain | None:
+        return self._brain
 
     def emit(
         self,
