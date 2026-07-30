@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from aura.core.tools import ToolRegistry
 from aura.core.tool_result import ToolResult
+from aura.core.tools import ToolRegistry
 
 
 class ToolRunner:

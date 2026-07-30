@@ -1,10 +1,10 @@
-from aura.context.builder import ContextBuilder
 from aura.ai.manager import AIManager
 from aura.ai.provider_response import ProviderResponse
 from aura.ai.providers.base import AIProvider
 from aura.ai.providers.dummy_provider import DummyProvider
 from aura.ai.tool_call import ToolCall
 from aura.ai.tool_runner import ToolRunner
+from aura.context.builder import ContextBuilder
 from aura.core.ai_events import (
     AIResponseCompleted,
     AIResponseStarted,

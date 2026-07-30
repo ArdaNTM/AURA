@@ -30,7 +30,10 @@ class CLI:
             "[bold cyan]==================================================[/bold cyan]"
         )
         self._console.print(
-            f"[bold cyan]{settings.aura_name} {self.VERSION} - {self.CODENAME}[/bold cyan]"
+            
+                f"[bold cyan]{settings.aura_name} "
+                f"{self.VERSION} - {self.CODENAME}[/bold cyan]"
+            
         )
         self._console.print(
             "[bold cyan]==================================================[/bold cyan]"

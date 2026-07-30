@@ -1,5 +1,4 @@
 import pytest
-
 from aura.config.settings import Settings
 
 
