@@ -1,3 +1,4 @@
+from aura.context.builder import ContextBuilder
 from aura.ai.manager import AIManager
 from aura.ai.provider_response import ProviderResponse
 from aura.ai.providers.base import AIProvider
@@ -432,3 +433,68 @@ def test_tool_failed_event() -> None:
     )
 
     assert event.name == "missing"
+
+def test_ai_manager_injects_memory_context():
+    registry = ToolRegistry()
+
+    memory = InMemoryMemory()
+
+    memory.add(
+        "user",
+        "AURA memory sistemi tamamlandı",
+    )
+
+    session = Session(
+        memory,
+    )
+
+    class ContextCheckingProvider(AIProvider):
+        """Provider that verifies memory injection."""
+
+        @property
+        def name(self) -> str:
+            return "context-checker"
+
+        def generate_response(
+            self,
+            user_message: str,
+            history=None,
+            tools=None,
+            tool_outputs=None,
+        ) -> ProviderResponse:
+            assert history is not None
+
+            system_messages = [
+                message
+                for message in history
+                if message["role"] == "system"
+            ]
+
+            assert len(system_messages) == 1
+
+            assert (
+                "AURA memory sistemi tamamlandı"
+                in system_messages[0]["content"]
+            )
+
+            return ProviderResponse(
+                text="memory bulundu",
+            )
+
+    manager = AIManager(
+        ContextCheckingProvider(),
+        session,
+        registry,
+        ToolRunner(registry),
+        context_builder=ContextBuilder(
+            session,
+            registry,
+            memory,
+        ),
+    )
+
+    result = manager.respond(
+        "AURA memory",
+    )
+
+    assert result == "memory bulundu"

@@ -12,6 +12,8 @@ def test_sqlite_memory_starts_empty(tmp_path: Path):
 
     assert memory.history() == []
 
+    memory.close()
+
 
 def test_sqlite_add_message(tmp_path: Path):
     db_path = tmp_path / "memory.db"
@@ -31,9 +33,17 @@ def test_sqlite_add_message(tmp_path: Path):
     )
 
     assert memory.history() == [
-        ("user", "Hello"),
-        ("assistant", "Hi!"),
+        (
+            "user",
+            "Hello",
+        ),
+        (
+            "assistant",
+            "Hi!",
+        ),
     ]
+
+    memory.close()
 
 
 def test_sqlite_persists_data(tmp_path: Path):
@@ -55,7 +65,10 @@ def test_sqlite_persists_data(tmp_path: Path):
     )
 
     assert memory2.history() == [
-        ("user", "Remember this"),
+        (
+            "user",
+            "Remember this",
+        ),
     ]
 
     memory2.close()
@@ -76,5 +89,52 @@ def test_sqlite_clear(tmp_path: Path):
     memory.clear()
 
     assert memory.history() == []
+
+    memory.close()
+
+
+def test_sqlite_search(tmp_path: Path):
+    db_path = tmp_path / "memory.db"
+
+    memory = SQLiteMemory(
+        str(db_path),
+    )
+
+    memory.add(
+        "user",
+        "AURA projesine devam ediyoruz",
+    )
+
+    memory.add(
+        "assistant",
+        "Sprint 4 başladı",
+    )
+
+    result = memory.search(
+        "AURA",
+    )
+
+    assert result == [
+        (
+            "user",
+            "AURA projesine devam ediyoruz",
+        )
+    ]
+
+    memory.close()
+
+
+def test_sqlite_search_empty(tmp_path: Path):
+    db_path = tmp_path / "memory.db"
+
+    memory = SQLiteMemory(
+        str(db_path),
+    )
+
+    result = memory.search(
+        "bulunmayan",
+    )
+
+    assert result == []
 
     memory.close()

@@ -6,6 +6,7 @@ from aura.ai.factory import ProviderFactory
 from aura.ai.manager import AIManager
 from aura.ai.tool_runner import ToolRunner
 from aura.config.settings import Settings
+from aura.context.builder import ContextBuilder
 from aura.core.container import Container
 from aura.core.event_logger import EventLogger
 from aura.core.events import EventBus
@@ -67,6 +68,15 @@ class AuraApplication:
         )
 
         self.container.register_factory(
+            ContextBuilder,
+            lambda c: ContextBuilder(
+                c.resolve(Session),
+                c.resolve(ToolRegistry),
+                c.resolve(Memory),
+            ),
+        )
+
+        self.container.register_factory(
             AIManager,
             lambda c: AIManager(
                 ProviderFactory.create(
@@ -76,6 +86,7 @@ class AuraApplication:
                 c.resolve(ToolRegistry),
                 c.resolve(ToolRunner),
                 event_bus=c.resolve(EventBus),
+                context_builder=c.resolve(ContextBuilder),
             ),
         )
 

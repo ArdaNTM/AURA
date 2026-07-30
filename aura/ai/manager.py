@@ -7,6 +7,7 @@ from typing import Any
 from aura.ai.providers.base import AIProvider
 from aura.ai.tool_call import ToolCall
 from aura.ai.tool_runner import ToolRunner
+from aura.context.builder import ContextBuilder
 from aura.core.ai_events import (
     AIResponseCompleted,
     AIResponseStarted,
@@ -31,6 +32,7 @@ class AIManager:
         tool_runner: ToolRunner,
         max_tool_calls: int = 5,
         event_bus: EventBus | None = None,
+        context_builder: ContextBuilder | None = None,
     ) -> None:
         self._provider = provider
         self._session = session
@@ -38,6 +40,7 @@ class AIManager:
         self._tool_runner = tool_runner
         self._max_tool_calls = max_tool_calls
         self._event_bus = event_bus
+        self._context_builder = context_builder
 
     @property
     def provider(self) -> AIProvider:
@@ -150,6 +153,30 @@ class AIManager:
             "output": result.output,
         }
 
+    def build_context(
+        self,
+        query: str | None = None,
+    ) -> tuple[
+        list[dict[str, str]],
+        list[dict[str, object]],
+    ]:
+        """Build provider context."""
+
+        if self._context_builder:
+            context = self._context_builder.build(
+                query=query,
+            )
+
+            return (
+                context.messages,
+                context.tools,
+            )
+
+        return (
+            self._session.messages(),
+            self._tools.openai_schemas(),
+        )
+
     def respond(
         self,
         user_message: str,
@@ -166,10 +193,14 @@ class AIManager:
             user_message,
         )
 
+        history, tools = self.build_context(
+            query=user_message,
+        )
+
         response = self._provider.generate_response(
             user_message,
-            history=self._session.messages(),
-            tools=self._tools.openai_schemas(),
+            history=history,
+            tools=tools,
         )
 
         tool_call_count = 0
@@ -204,10 +235,14 @@ class AIManager:
                 result.output,
             )
 
+            history, tools = self.build_context(
+                query=user_message,
+            )
+
             response = self._provider.generate_response(
                 user_message,
-                history=self._session.messages(),
-                tools=self._tools.openai_schemas(),
+                history=history,
+                tools=tools,
                 tool_outputs=[
                     self.build_tool_output(
                         call,
