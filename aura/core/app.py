@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from aura.brain.brain import Brain
 from aura.ai.factory import ProviderFactory
 from aura.ai.manager import AIManager
 from aura.ai.tool_runner import ToolRunner
@@ -87,6 +88,7 @@ class AuraApplication:
                 c.resolve(ToolRunner),
                 event_bus=c.resolve(EventBus),
                 context_builder=c.resolve(ContextBuilder),
+                brain=Brain(),
             ),
         )
 
