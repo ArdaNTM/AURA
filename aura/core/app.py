@@ -14,17 +14,46 @@ class AuraApplication:
     """Create and run the AURA core application."""
 
     def __init__(
-        self, settings: Settings | None = None, cli: CLI | None = None
+        self,
+        settings: Settings | None = None,
+        cli: CLI | None = None,
     ) -> None:
         self.settings = settings or Settings()
-        self.logger = configure_logging(self.settings.log_level)
+        self.logger = configure_logging(
+            self.settings.log_level,
+            self.settings.log_directory,
+        )
+
         provider = ProviderFactory.create(self.settings)
-        self.router = CommandRouter(AIManager(provider))
+        ai_manager = AIManager(provider)
+
+        self.router = CommandRouter(ai_manager)
         self.cli = cli or CLI()
 
-    def run(self) -> None:
-        """Start the chosen user interface."""
+    def startup(self) -> None:
+        """Initialize application resources."""
         self.logger.info(
-            "AURA is starting with provider '%s'.", self.settings.model_provider
+            "AURA is starting with provider '%s'.",
+            self.settings.model_provider,
         )
-        self.cli.start(self.settings, self.router)
+
+    def run(self) -> None:
+        """Run the application."""
+        self.startup()
+
+        try:
+            self.cli.start(self.settings, self.router)
+
+        except KeyboardInterrupt:
+            self.logger.info("Application interrupted by user.")
+
+        except Exception:
+            self.logger.exception("Unexpected application error.")
+            raise
+
+        finally:
+            self.shutdown()
+
+    def shutdown(self) -> None:
+        """Release application resources."""
+        self.logger.info("AURA shutdown complete.")

@@ -13,6 +13,9 @@ from aura.core.router import CommandRouter
 class CLI:
     """Run AURA's interactive terminal loop."""
 
+    VERSION = "v0.2.0"
+    CODENAME = "Foundation"
+
     def __init__(
         self,
         console: Console | None = None,
@@ -21,13 +24,13 @@ class CLI:
         self._console = console or Console()
         self._input_reader = input_reader
 
-    def start(self, settings: Settings, router: CommandRouter) -> None:
-        """Show the banner and process messages until the user exits."""
+    def _show_banner(self, settings: Settings) -> None:
+        """Display the application banner."""
         self._console.print(
             "[bold cyan]==================================================[/bold cyan]"
         )
         self._console.print(
-            f"[bold cyan]{settings.aura_name} v0.1.0 - Foundation[/bold cyan]"
+            f"[bold cyan]{settings.aura_name} {self.VERSION} - {self.CODENAME}[/bold cyan]"
         )
         self._console.print(
             "[bold cyan]==================================================[/bold cyan]"
@@ -39,6 +42,10 @@ class CLI:
         )
         self._console.print()
 
+    def start(self, settings: Settings, router: CommandRouter) -> None:
+        """Start the interactive terminal session."""
+        self._show_banner(settings)
+
         while True:
             try:
                 user_input = self._input_reader("AURA > ")
@@ -47,7 +54,9 @@ class CLI:
                 return
 
             result = router.route(user_input)
+
             self._console.print(result.message)
             self._console.print()
+
             if result.should_exit:
                 return

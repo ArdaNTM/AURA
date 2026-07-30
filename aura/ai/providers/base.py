@@ -6,9 +6,15 @@ from abc import ABC, abstractmethod
 
 
 class AIProvider(ABC):
-    """A provider capable of generating one text response."""
+    """Base interface for all AI providers."""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Return the provider name."""
+        raise NotImplementedError
 
     @abstractmethod
     def generate_response(self, user_message: str) -> str:
-        """Generate a response for one user message."""
+        """Generate a response for a user message."""
         raise NotImplementedError
