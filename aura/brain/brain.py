@@ -17,10 +17,7 @@ class Brain:
     ) -> None:
         self._planner = planner or Planner()
 
-        self._decision_engine = (
-            decision_engine
-            or DecisionEngine()
-        )
+        self._decision_engine = decision_engine or DecisionEngine()
 
     @property
     def planner(self) -> Planner:

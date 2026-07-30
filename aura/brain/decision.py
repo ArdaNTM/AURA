@@ -28,16 +28,10 @@ class DecisionEngine:
         if decision.requires_tool:
             return Action(
                 name="execute_tool",
-                reason=(
-                    f"Intent '{decision.intent}' "
-                    "requires a tool."
-                ),
+                reason=(f"Intent '{decision.intent}' " "requires a tool."),
             )
 
         return Action(
             name="generate_response",
-            reason=(
-                f"Intent '{decision.intent}' "
-                "can be handled conversationally."
-            ),
+            reason=(f"Intent '{decision.intent}' " "can be handled conversationally."),
         )
