@@ -12,10 +12,7 @@ def build_identity_prompt(
 
     identity = profile or IdentityProfile()
 
-    capabilities = "\n".join(
-        f"- {item}"
-        for item in identity.capabilities
-    )
+    capabilities = "\n".join(f"- {item}" for item in identity.capabilities)
 
     return f"""
 You are {identity.name}.
