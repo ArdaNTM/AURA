@@ -17,6 +17,7 @@ from aura.core.events import EventBus
 from aura.core.session import Session
 from aura.core.tools import Tool, ToolRegistry
 from aura.memory.in_memory import InMemoryMemory
+from aura.tools import CalculatorTool
 
 
 class EchoTool(Tool):
@@ -622,3 +623,25 @@ def test_ai_manager_stores_brain_action() -> None:
     assert manager.last_action is not None
 
     assert manager.last_action.name == "generate_response"
+
+
+def test_ai_manager_executes_brain_action():
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
+
+    manager = AIManager(
+        DummyProvider(),
+        Session(InMemoryMemory()),
+        registry,
+        ToolRunner(registry),
+        brain=Brain(),
+    )
+
+    result = manager.respond(
+        "2+2 hesapla",
+    )
+
+    assert result == "4"

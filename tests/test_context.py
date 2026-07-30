@@ -91,3 +91,29 @@ def test_context_builder_contains_identity():
     assert system_message["role"] == "system"
 
     assert "You are AURA" in system_message["content"]
+
+
+def test_context_builder_accepts_metadata():
+    memory = InMemoryMemory()
+
+    session = Session(
+        memory,
+    )
+
+    registry = ToolRegistry()
+
+    builder = ContextBuilder(
+        session,
+        registry,
+        memory,
+    )
+
+    context = builder.build(
+        metadata={
+            "action": "generate_response",
+        },
+    )
+
+    assert context.metadata == {
+        "action": "generate_response",
+    }

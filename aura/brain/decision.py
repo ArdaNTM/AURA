@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from aura.brain.models import Decision
 
@@ -15,6 +15,12 @@ class Action:
 
     reason: str
 
+    tool_name: str | None = None
+
+    parameters: dict[str, object] = field(
+        default_factory=dict,
+    )
+
 
 class DecisionEngine:
     """Convert decisions into executable actions."""
@@ -26,9 +32,21 @@ class DecisionEngine:
         """Select next action."""
 
         if decision.requires_tool:
+            parameters: dict[str, object] = {}
+
+            if decision.intent == "calculation":
+                parameters = {
+                    "expression": decision.metadata.get(
+                        "expression",
+                        "",
+                    )
+                }
+
             return Action(
                 name="execute_tool",
                 reason=(f"Intent '{decision.intent}' " "requires a tool."),
+                tool_name="calculator",
+                parameters=parameters,
             )
 
         return Action(

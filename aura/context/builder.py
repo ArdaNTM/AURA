@@ -25,6 +25,7 @@ class ContextBuilder:
     def build(
         self,
         query: str | None = None,
+        metadata: dict[str, object] | None = None,
     ) -> AIContext:
         """Create current AI context."""
 
@@ -58,4 +59,5 @@ class ContextBuilder:
             tools=self._tools.openai_schemas(),
             memories=memories,
             system_prompt=system_prompt,
+            metadata=metadata or {},
         )

@@ -70,6 +70,17 @@ class AIManager:
     def brain(self) -> Brain | None:
         return self._brain
 
+    def build_brain_metadata(self) -> dict[str, object]:
+        """Return current brain decision metadata."""
+
+        if not self._last_action:
+            return {}
+
+        return {
+            "action": self._last_action.name,
+            "reason": self._last_action.reason,
+        }
+
     @property
     def last_action(self) -> object | None:
         return getattr(
@@ -109,6 +120,25 @@ class AIManager:
             name,
             *args,
             **kwargs,
+        )
+
+    def run_brain_action(
+        self,
+    ) -> ToolResult | None:
+        """Execute tool selected by the brain action."""
+
+        if not self._last_action:
+            return None
+
+        if self._last_action.name != "execute_tool":
+            return None
+
+        if not self._last_action.tool_name:
+            return None
+
+        return self._tool_runner.run(
+            self._last_action.tool_name,
+            **self._last_action.parameters,
         )
 
     def execute_tool_call(
@@ -181,8 +211,8 @@ class AIManager:
         if self._context_builder:
             context = self._context_builder.build(
                 query=query,
+                metadata=self.build_brain_metadata(),
             )
-
             return (
                 context.messages,
                 context.tools,
@@ -213,6 +243,23 @@ class AIManager:
             _, self._last_action = self._brain.think(
                 user_message,
             )
+
+        brain_result = self.run_brain_action()
+
+        if brain_result:
+            message = brain_result.output
+
+            self._session.add_assistant_message(
+                message,
+            )
+
+            self.emit(
+                AIResponseCompleted(
+                    message,
+                )
+            )
+
+            return message
 
         history, tools = self.build_context(
             query=user_message,

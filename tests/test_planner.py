@@ -2,7 +2,6 @@ from aura.brain.planner import Planner
 
 
 def test_planner_detects_calculation():
-
     planner = Planner()
 
     decision = planner.decide(
@@ -15,9 +14,10 @@ def test_planner_detects_calculation():
 
     assert len(decision.plan) == 2
 
+    assert decision.metadata["expression"] == "5+5"
+
 
 def test_planner_detects_conversation():
-
     planner = Planner()
 
     decision = planner.decide(

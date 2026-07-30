@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from aura.brain.models import Decision, PlanStep
 
 
@@ -39,6 +41,11 @@ class Planner:
                         "Use calculator tool",
                     ),
                 ],
+                metadata={
+                    "expression": self._extract_expression(
+                        user_message,
+                    ),
+                },
             )
 
         return Decision(
@@ -50,4 +57,16 @@ class Planner:
                     "Generate conversational response",
                 ),
             ],
+        )
+
+    def _extract_expression(
+        self,
+        user_message: str,
+    ) -> str:
+        """Extract mathematical expression from message."""
+
+        return re.sub(
+            r"[^\d+\-*/().]",
+            "",
+            user_message,
         )
