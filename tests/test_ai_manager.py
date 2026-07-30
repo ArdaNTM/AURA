@@ -600,3 +600,25 @@ def test_ai_manager_calls_brain() -> None:
     )
 
     assert brain.called
+
+
+def test_ai_manager_stores_brain_action() -> None:
+    registry = ToolRegistry()
+
+    brain = Brain()
+
+    manager = AIManager(
+        DummyProvider(),
+        Session(InMemoryMemory()),
+        registry,
+        ToolRunner(registry),
+        brain=brain,
+    )
+
+    manager.respond(
+        "Merhaba",
+    )
+
+    assert manager.last_action is not None
+
+    assert manager.last_action.name == "generate_response"

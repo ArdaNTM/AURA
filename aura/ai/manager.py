@@ -44,6 +44,7 @@ class AIManager:
         self._event_bus = event_bus
         self._context_builder = context_builder
         self._brain = brain
+        self._last_action = None
 
     @property
     def provider(self) -> AIProvider:
@@ -68,6 +69,14 @@ class AIManager:
     @property
     def brain(self) -> Brain | None:
         return self._brain
+
+    @property
+    def last_action(self) -> object | None:
+        return getattr(
+            self,
+            "_last_action",
+            None,
+        )
 
     def emit(
         self,
@@ -201,7 +210,7 @@ class AIManager:
         )
 
         if self._brain:
-            self._brain.think(
+            _, self._last_action = self._brain.think(
                 user_message,
             )
 
