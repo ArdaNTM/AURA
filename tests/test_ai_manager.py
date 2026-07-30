@@ -565,3 +565,38 @@ def test_ai_manager_accepts_brain() -> None:
     )
 
     assert manager.brain is brain
+
+
+def test_ai_manager_calls_brain() -> None:
+    class TrackingBrain(Brain):
+        def __init__(self) -> None:
+            super().__init__()
+            self.called = False
+
+        def think(
+            self,
+            user_message: str,
+        ):
+            self.called = True
+
+            return super().think(
+                user_message,
+            )
+
+    registry = ToolRegistry()
+
+    brain = TrackingBrain()
+
+    manager = AIManager(
+        DummyProvider(),
+        Session(InMemoryMemory()),
+        registry,
+        ToolRunner(registry),
+        brain=brain,
+    )
+
+    manager.respond(
+        "Merhaba",
+    )
+
+    assert brain.called

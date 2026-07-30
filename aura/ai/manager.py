@@ -200,6 +200,11 @@ class AIManager:
             user_message,
         )
 
+        if self._brain:
+            self._brain.think(
+                user_message,
+            )
+
         history, tools = self.build_context(
             query=user_message,
         )
