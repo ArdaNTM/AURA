@@ -163,8 +163,7 @@ def test_dummy_provider_answers_greeting() -> None:
     assert manager.provider.name == "dummy"
 
     assert (
-        manager.respond("Merhaba")
-        == "Merhaba! Ben AURA. Şimdilik çekirdek modundayım."
+        manager.respond("Merhaba") == "Merhaba! Ben AURA. Şimdilik çekirdek modundayım."
     )
 
 
@@ -172,8 +171,7 @@ def test_dummy_provider_echoes_other_messages() -> None:
     manager = create_manager()
 
     assert (
-        manager.respond("Bugün ne yapıyoruz?")
-        == "Mesajını aldım: Bugün ne yapıyoruz?"
+        manager.respond("Bugün ne yapıyoruz?") == "Mesajını aldım: Bugün ne yapıyoruz?"
     )
 
 
@@ -434,6 +432,7 @@ def test_tool_failed_event() -> None:
 
     assert event.name == "missing"
 
+
 def test_ai_manager_injects_memory_context():
     registry = ToolRegistry()
 
@@ -465,17 +464,12 @@ def test_ai_manager_injects_memory_context():
             assert history is not None
 
             system_messages = [
-                message
-                for message in history
-                if message["role"] == "system"
+                message for message in history if message["role"] == "system"
             ]
 
             assert len(system_messages) == 1
 
-            assert (
-                "AURA memory sistemi tamamlandı"
-                in system_messages[0]["content"]
-            )
+            assert "AURA memory sistemi tamamlandı" in system_messages[0]["content"]
 
             return ProviderResponse(
                 text="memory bulundu",

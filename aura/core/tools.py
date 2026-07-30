@@ -71,9 +71,7 @@ class ToolRegistry:
         tool: Tool,
     ) -> None:
         if tool.name in self._tools:
-            raise ValueError(
-                f"Tool '{tool.name}' is already registered."
-            )
+            raise ValueError(f"Tool '{tool.name}' is already registered.")
 
         self._tools[tool.name] = tool
 
@@ -94,9 +92,7 @@ class ToolRegistry:
             return self._tools[name]
 
         except KeyError as exc:
-            raise KeyError(
-                f"Unknown tool '{name}'."
-            ) from exc
+            raise KeyError(f"Unknown tool '{name}'.") from exc
 
     def execute(
         self,
@@ -143,18 +139,12 @@ class ToolRegistry:
     def schemas(self) -> list[dict[str, Any]]:
         """Return AURA schemas."""
 
-        return [
-            self._tools[name].schema()
-            for name in sorted(self._tools)
-        ]
+        return [self._tools[name].schema() for name in sorted(self._tools)]
 
     def openai_schemas(self) -> list[dict[str, Any]]:
         """Return OpenAI compatible schemas."""
 
-        return [
-            self._tools[name].openai_schema()
-            for name in sorted(self._tools)
-        ]
+        return [self._tools[name].openai_schema() for name in sorted(self._tools)]
 
     def clear(self) -> None:
         """Remove all registered tools."""

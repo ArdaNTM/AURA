@@ -63,9 +63,7 @@ class CalculatorTool(Tool):
             return str(result)
 
         except Exception as exc:
-            raise ValueError(
-                f"Invalid expression: {expression!r}"
-            ) from exc
+            raise ValueError(f"Invalid expression: {expression!r}") from exc
 
     def _evaluate(
         self,
@@ -92,9 +90,7 @@ class CalculatorTool(Tool):
             )
 
             if operator_func is None:
-                raise ValueError(
-                    "Unsupported operator."
-                )
+                raise ValueError("Unsupported operator.")
 
             return operator_func(
                 self._evaluate(
@@ -114,9 +110,7 @@ class CalculatorTool(Tool):
             )
 
             if operator_func is None:
-                raise ValueError(
-                    "Unsupported unary operator."
-                )
+                raise ValueError("Unsupported unary operator.")
 
             return operator_func(
                 self._evaluate(
@@ -124,6 +118,4 @@ class CalculatorTool(Tool):
                 ),
             )
 
-        raise ValueError(
-            "Unsupported expression."
-        )
+        raise ValueError("Unsupported expression.")

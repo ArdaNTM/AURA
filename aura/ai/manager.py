@@ -209,9 +209,7 @@ class AIManager:
             tool_call_count += 1
 
             if tool_call_count > self._max_tool_calls:
-                message = (
-                    "AURA çok fazla araç çağrısı denedi."
-                )
+                message = "AURA çok fazla araç çağrısı denedi."
 
                 self._session.add_assistant_message(
                     message,
@@ -254,9 +252,7 @@ class AIManager:
         if response.text:
             message = response.text
         else:
-            message = (
-                "AURA şu anda yanıt üretemedi."
-            )
+            message = "AURA şu anda yanıt üretemedi."
 
         self._session.add_assistant_message(
             message,

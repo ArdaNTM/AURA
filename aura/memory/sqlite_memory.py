@@ -18,15 +18,13 @@ class SQLiteMemory(Memory):
             path,
         )
 
-        self._connection.execute(
-            """
+        self._connection.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL
             )
-            """
-        )
+            """)
 
         self._connection.commit()
 
@@ -49,13 +47,11 @@ class SQLiteMemory(Memory):
         self._connection.commit()
 
     def history(self) -> list[tuple[str, str]]:
-        cursor = self._connection.execute(
-            """
+        cursor = self._connection.execute("""
             SELECT role, content
             FROM messages
             ORDER BY id ASC
-            """
-        )
+            """)
 
         return list(
             cursor.fetchall(),
@@ -74,9 +70,7 @@ class SQLiteMemory(Memory):
             WHERE content LIKE ?
             ORDER BY id ASC
             """,
-            (
-                f"%{query}%",
-            ),
+            (f"%{query}%",),
         )
 
         return list(
@@ -84,11 +78,9 @@ class SQLiteMemory(Memory):
         )
 
     def clear(self) -> None:
-        self._connection.execute(
-            """
+        self._connection.execute("""
             DELETE FROM messages
-            """
-        )
+            """)
 
         self._connection.commit()
 

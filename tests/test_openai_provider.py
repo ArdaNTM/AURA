@@ -66,9 +66,7 @@ def test_openai_provider_sends_tools() -> None:
 
     provider._client.responses.create.assert_called_once()
 
-    request = (
-        provider._client.responses.create.call_args.kwargs
-    )
+    request = provider._client.responses.create.call_args.kwargs
 
     assert request["tools"] == [
         {
@@ -104,9 +102,7 @@ def test_openai_provider_sends_tool_outputs() -> None:
 
     provider._client.responses.create.assert_called_once()
 
-    request = (
-        provider._client.responses.create.call_args.kwargs
-    )
+    request = provider._client.responses.create.call_args.kwargs
 
     assert {
         "type": "function_call_output",

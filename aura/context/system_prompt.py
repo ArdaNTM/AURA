@@ -11,13 +11,9 @@ def build_memory_context(
     if not memories:
         return ""
 
-    lines = [
-        "Relevant memories from previous conversations:"
-    ]
+    lines = ["Relevant memories from previous conversations:"]
 
     for role, content in memories:
-        lines.append(
-            f"- {role}: {content}"
-        )
+        lines.append(f"- {role}: {content}")
 
     return "\n".join(lines)

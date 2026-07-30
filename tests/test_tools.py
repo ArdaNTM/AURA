@@ -33,9 +33,7 @@ class FailingTool(Tool):
         return "failing"
 
     def execute(self) -> str:
-        raise ValueError(
-            "Tool failed."
-        )
+        raise ValueError("Tool failed.")
 
 
 def test_register() -> None:

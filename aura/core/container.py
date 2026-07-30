@@ -43,10 +43,7 @@ class Container:
 
     def has(self, service_type: type[Any]) -> bool:
         """Return True if a service is registered."""
-        return (
-            service_type in self._instances
-            or service_type in self._factories
-        )
+        return service_type in self._instances or service_type in self._factories
 
     def clear(self) -> None:
         """Remove all registrations."""

@@ -14,14 +14,10 @@ class FakeLogger:
         self.messages = []
 
     def info(self, message, *args):
-        self.messages.append(
-            ("info", message, args)
-        )
+        self.messages.append(("info", message, args))
 
     def error(self, message, *args):
-        self.messages.append(
-            ("error", message, args)
-        )
+        self.messages.append(("error", message, args))
 
 
 def test_event_logger_subscribes_events() -> None:

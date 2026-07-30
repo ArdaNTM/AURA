@@ -57,22 +57,13 @@ def test_openai_tool_agent_flow() -> None:
 
     assert result == "Sonuç 4."
 
-    assert (
-        provider._client.responses.create.call_count
-        == 2
-    )
+    assert provider._client.responses.create.call_count == 2
 
-    first_request = (
-        provider._client.responses.create
-        .call_args_list[0]
-        .kwargs
-    )
+    first_request = provider._client.responses.create.call_args_list[0].kwargs
 
     assert first_request["tools"][0]["type"] == "function"
 
-    assert first_request["tools"][0]["name"] == (
-        "calculator"
-    )
+    assert first_request["tools"][0]["name"] == ("calculator")
 
     assert first_request["tools"][0]["description"] == (
         "Evaluate basic mathematical expressions."
@@ -83,11 +74,7 @@ def test_openai_tool_agent_flow() -> None:
         == registry.openai_schemas()[0]["parameters"]
     )
 
-    second_request = (
-        provider._client.responses.create
-        .call_args_list[1]
-        .kwargs
-    )
+    second_request = provider._client.responses.create.call_args_list[1].kwargs
 
     assert {
         "type": "function_call_output",
