@@ -2,10 +2,7 @@
 
 Artificial Universal Responsive Assistant
 
-AURA is a modular AI operating system project inspired by JARVIS.
+A modular AI Operating System.
 
-## Status
-
-🚧 Under Development
-
-Version: v0.1.0
+Status:
+🚧 Development

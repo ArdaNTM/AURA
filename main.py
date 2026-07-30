@@ -1,16 +1,9 @@
-from rich.console import Console
+from aura.core.app import AuraApplication
 
-console = Console()
 
 def main():
-    console.print("[bold cyan]===================================[/bold cyan]")
-    console.print("[bold cyan]        AURA AI SYSTEM[/bold cyan]")
-    console.print("[bold cyan]===================================[/bold cyan]")
-
-    console.print()
-    console.print("[green]Merhaba.[/green]")
-    console.print("[green]Ben AURA.[/green]")
-    console.print("[yellow]Sistem başlatıldı.[/yellow]")
+    app = AuraApplication()
+    app.run()
 
 
 if __name__ == "__main__":
