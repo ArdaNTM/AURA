@@ -14,10 +14,14 @@ class Settings(BaseSettings):
     """Runtime settings, with safe defaults for an offline first run."""
 
     aura_name: str = "AURA"
+
     model_provider: Literal["dummy", "openai"] = "dummy"
 
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-4.1-mini"
+
+    memory_backend: Literal["memory", "sqlite"] = "sqlite"
+    memory_path: Path = Path("data/aura_memory.db")
 
     log_level: str = "INFO"
     log_directory: Path = Path("data/logs")
@@ -36,6 +40,12 @@ class Settings(BaseSettings):
         """Normalize provider names."""
         return value.casefold().strip() if isinstance(value, str) else value
 
+    @field_validator("memory_backend", mode="before")
+    @classmethod
+    def normalize_memory_backend(cls, value: object) -> object:
+        """Normalize memory backend names."""
+        return value.casefold().strip() if isinstance(value, str) else value
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:
@@ -51,6 +61,12 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_log_directory(cls, value: Path | str) -> Path:
         """Normalize log directory."""
+        return Path(value)
+
+    @field_validator("memory_path")
+    @classmethod
+    def normalize_memory_path(cls, value: Path | str) -> Path:
+        """Normalize memory database path."""
         return Path(value)
 
     @model_validator(mode="after")

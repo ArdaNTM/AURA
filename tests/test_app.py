@@ -23,3 +23,11 @@ def test_shutdown_is_called() -> None:
     app.run()
 
     app.shutdown.assert_called_once()
+
+
+def test_application_registers_default_tools() -> None:
+    app = AuraApplication()
+
+    assert app.tools.list_tools() == [
+        "calculator",
+    ]
