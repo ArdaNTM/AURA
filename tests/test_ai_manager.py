@@ -492,3 +492,59 @@ def test_ai_manager_injects_memory_context():
     )
 
     assert result == "memory bulundu"
+
+
+def test_ai_manager_injects_identity_context():
+    registry = ToolRegistry()
+
+    memory = InMemoryMemory()
+
+    session = Session(
+        memory,
+    )
+
+    class IdentityCheckingProvider(AIProvider):
+        """Provider that verifies identity injection."""
+
+        @property
+        def name(self) -> str:
+            return "identity-checker"
+
+        def generate_response(
+            self,
+            user_message: str,
+            history=None,
+            tools=None,
+            tool_outputs=None,
+        ) -> ProviderResponse:
+            assert history is not None
+
+            system_messages = [
+                message for message in history if message["role"] == "system"
+            ]
+
+            assert len(system_messages) == 1
+
+            assert "AURA" in system_messages[0]["content"]
+
+            return ProviderResponse(
+                text="identity bulundu",
+            )
+
+    manager = AIManager(
+        IdentityCheckingProvider(),
+        session,
+        registry,
+        ToolRunner(registry),
+        context_builder=ContextBuilder(
+            session,
+            registry,
+            memory,
+        ),
+    )
+
+    result = manager.respond(
+        "identity test",
+    )
+
+    assert result == "identity bulundu"

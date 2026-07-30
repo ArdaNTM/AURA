@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from aura.identity import IdentityProfile, build_identity_prompt
+
 
 def build_memory_context(
     memories: list[tuple[str, str]],
@@ -17,3 +19,21 @@ def build_memory_context(
         lines.append(f"- {role}: {content}")
 
     return "\n".join(lines)
+
+
+def build_system_prompt(
+    memories: list[tuple[str, str]],
+    profile: IdentityProfile | None = None,
+) -> str:
+    """Create complete AURA system prompt."""
+
+    sections = [
+        build_identity_prompt(
+            profile,
+        ),
+        build_memory_context(
+            memories,
+        ),
+    ]
+
+    return "\n\n".join(section for section in sections if section)

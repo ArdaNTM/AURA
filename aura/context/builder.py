@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from aura.context.models import AIContext
-from aura.context.system_prompt import build_memory_context
+from aura.context.system_prompt import build_system_prompt
 from aura.core.session import Session
 from aura.core.tools import ToolRegistry
 from aura.memory.base import Memory
@@ -35,7 +35,7 @@ class ContextBuilder:
                 query,
             )
 
-        system_prompt = build_memory_context(
+        system_prompt = build_system_prompt(
             memories,
         )
 
