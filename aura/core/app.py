@@ -88,7 +88,9 @@ class AuraApplication:
                 c.resolve(ToolRunner),
                 event_bus=c.resolve(EventBus),
                 context_builder=c.resolve(ContextBuilder),
-                brain=Brain(),
+                brain=Brain(
+                    tools=c.resolve(ToolRegistry),
+                ),
             ),
         )
 

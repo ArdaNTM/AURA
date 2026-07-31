@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from aura.brain.decision import Action, DecisionEngine
 from aura.brain.models import Decision
 from aura.brain.planner import Planner
+
+if TYPE_CHECKING:
+    from aura.core.tools import ToolRegistry
 
 
 class Brain:
@@ -14,8 +19,13 @@ class Brain:
         self,
         planner: Planner | None = None,
         decision_engine: DecisionEngine | None = None,
+        tools: ToolRegistry | None = None,
     ) -> None:
-        self._planner = planner or Planner()
+        self._tools = tools
+
+        self._planner = planner or Planner(
+            tools=tools,
+        )
 
         self._decision_engine = decision_engine or DecisionEngine()
 
@@ -26,6 +36,10 @@ class Brain:
     @property
     def decision_engine(self) -> DecisionEngine:
         return self._decision_engine
+
+    @property
+    def tools(self) -> ToolRegistry | None:
+        return self._tools
 
     def think(
         self,

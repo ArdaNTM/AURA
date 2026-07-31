@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from aura.brain.models import Decision, PlanStep
+
+if TYPE_CHECKING:
+    from aura.core.tools import ToolRegistry
 
 
 class Planner:
     """Create decisions from user requests."""
+
+    def __init__(
+        self,
+        tools: ToolRegistry | None = None,
+    ) -> None:
+        self._tools = tools
 
     def decide(
         self,
@@ -76,10 +86,16 @@ class Planner:
         self,
         intent: str,
     ) -> str | None:
-        """Select tool for intent."""
+        """Select available tool for intent."""
 
         if intent == "calculation":
-            return "calculator"
+            if self._tools is None:
+                return "calculator"
+
+            if self._tools.has(
+                "calculator",
+            ):
+                return "calculator"
 
         return None
 
