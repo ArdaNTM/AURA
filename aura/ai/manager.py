@@ -8,6 +8,7 @@ from aura.ai.providers.base import AIProvider
 from aura.ai.tool_call import ToolCall
 from aura.ai.tool_runner import ToolRunner
 from aura.brain.brain import Brain
+from aura.brain.executor import PlanExecutor
 from aura.context.builder import ContextBuilder
 from aura.core.ai_events import (
     AIResponseCompleted,
@@ -35,6 +36,7 @@ class AIManager:
         event_bus: EventBus | None = None,
         context_builder: ContextBuilder | None = None,
         brain: Brain | None = None,
+        executor: PlanExecutor | None = None,
     ) -> None:
         self._provider = provider
         self._session = session
@@ -44,6 +46,7 @@ class AIManager:
         self._event_bus = event_bus
         self._context_builder = context_builder
         self._brain = brain
+        self._executor = executor
         self._last_action = None
 
     @property
@@ -69,6 +72,12 @@ class AIManager:
     @property
     def brain(self) -> Brain | None:
         return self._brain
+
+    @property
+    def executor(
+        self,
+    ) -> PlanExecutor | None:
+        return self._executor
 
     def build_brain_metadata(self) -> dict[str, object]:
         """Return current brain decision metadata."""
@@ -239,10 +248,32 @@ class AIManager:
             user_message,
         )
 
+        decision = None
+
         if self._brain:
-            _, self._last_action = self._brain.think(
+            decision, self._last_action = self._brain.think(
                 user_message,
             )
+
+        if decision and self._executor:
+            results = self._executor.execute(
+                decision,
+            )
+
+            if results:
+                message = results[-1].output
+
+                self._session.add_assistant_message(
+                    message,
+                )
+
+                self.emit(
+                    AIResponseCompleted(
+                        message,
+                    )
+                )
+
+                return message
 
         brain_result = self.run_brain_action()
 

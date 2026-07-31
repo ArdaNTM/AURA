@@ -10,7 +10,14 @@ class PlanStep:
     """Single step in an execution plan."""
 
     description: str
+
+    action: str | None = None
+
     completed: bool = False
+
+    metadata: dict[str, object] = field(
+        default_factory=dict,
+    )
 
 
 @dataclass

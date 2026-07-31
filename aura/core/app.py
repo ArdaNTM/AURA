@@ -6,6 +6,7 @@ from aura.ai.factory import ProviderFactory
 from aura.ai.manager import AIManager
 from aura.ai.tool_runner import ToolRunner
 from aura.brain.brain import Brain
+from aura.brain.executor import PlanExecutor
 from aura.config.settings import Settings
 from aura.context.builder import ContextBuilder
 from aura.core.container import Container
@@ -90,6 +91,9 @@ class AuraApplication:
                 context_builder=c.resolve(ContextBuilder),
                 brain=Brain(
                     tools=c.resolve(ToolRegistry),
+                ),
+                executor=PlanExecutor(
+                    c.resolve(ToolRunner),
                 ),
             ),
         )

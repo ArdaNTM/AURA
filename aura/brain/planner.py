@@ -31,6 +31,10 @@ class Planner:
         if self._is_calculation_request(
             message,
         ):
+            expression = self._extract_expression(
+                user_message,
+            )
+
             return Decision(
                 intent="calculation",
                 confidence=0.9,
@@ -40,16 +44,19 @@ class Planner:
                 ),
                 plan=[
                     PlanStep(
-                        "Analyze calculation request",
+                        description="Analyze calculation request",
+                        action="analyze",
                     ),
                     PlanStep(
-                        "Use calculator tool",
+                        description="Calculate expression",
+                        action="calculator",
+                        metadata={
+                            "expression": expression,
+                        },
                     ),
                 ],
                 metadata={
-                    "expression": self._extract_expression(
-                        user_message,
-                    ),
+                    "expression": expression,
                 },
             )
 
@@ -59,7 +66,8 @@ class Planner:
             requires_tool=False,
             plan=[
                 PlanStep(
-                    "Generate conversational response",
+                    description="Generate conversational response",
+                    action="respond",
                 ),
             ],
         )
@@ -74,11 +82,11 @@ class Planner:
             keyword in message
             for keyword in [
                 "hesapla",
-                "kaÃ§",
+                "kaÃƒÂ§",
                 "topla",
-                "Ã§Ä±kar",
-                "Ã§arp",
-                "bÃ¶l",
+                "ÃƒÂ§Ã„Â±kar",
+                "ÃƒÂ§arp",
+                "bÃƒÂ¶l",
             ]
         )
 
