@@ -5,6 +5,8 @@ from aura.ai.providers.dummy_provider import DummyProvider
 from aura.ai.tool_call import ToolCall
 from aura.ai.tool_runner import ToolRunner
 from aura.brain.brain import Brain
+from aura.brain.executor import PlanExecutor
+from aura.brain.runtime import AgentRuntime
 from aura.context.builder import ContextBuilder
 from aura.core.ai_events import (
     AIResponseCompleted,
@@ -552,68 +554,92 @@ def test_ai_manager_injects_identity_context():
     assert result == "identity bulundu"
 
 
-def test_ai_manager_accepts_brain() -> None:
+def test_ai_manager_accepts_runtime() -> None:
     registry = ToolRegistry()
 
-    brain = Brain()
+    runtime = AgentRuntime(
+        Brain(),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+    )
 
     manager = AIManager(
         DummyProvider(),
         Session(InMemoryMemory()),
         registry,
         ToolRunner(registry),
-        brain=brain,
+        runtime=runtime,
     )
 
-    assert manager.brain is brain
+    assert manager.runtime is runtime
 
 
-def test_ai_manager_calls_brain() -> None:
-    class TrackingBrain(Brain):
+def test_ai_manager_calls_runtime() -> None:
+    class TrackingRuntime(AgentRuntime):
         def __init__(self) -> None:
-            super().__init__()
+            registry = ToolRegistry()
+
+            super().__init__(
+                Brain(),
+                PlanExecutor(
+                    ToolRunner(
+                        registry,
+                    ),
+                ),
+            )
+
             self.called = False
 
-        def think(
+        def run(
             self,
             user_message: str,
         ):
             self.called = True
 
-            return super().think(
+            return super().run(
                 user_message,
             )
 
     registry = ToolRegistry()
 
-    brain = TrackingBrain()
+    runtime = TrackingRuntime()
 
     manager = AIManager(
         DummyProvider(),
         Session(InMemoryMemory()),
         registry,
         ToolRunner(registry),
-        brain=brain,
+        runtime=runtime,
     )
 
     manager.respond(
         "Merhaba",
     )
 
-    assert brain.called
+    assert runtime.called
 
 
-def test_ai_manager_stores_brain_action() -> None:
+def test_ai_manager_stores_runtime_action() -> None:
     registry = ToolRegistry()
 
-    brain = Brain()
+    runtime = AgentRuntime(
+        Brain(),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+    )
 
     manager = AIManager(
         DummyProvider(),
         Session(InMemoryMemory()),
         registry,
         ToolRunner(registry),
-        brain=brain,
+        runtime=runtime,
     )
 
     manager.respond(
@@ -625,11 +651,22 @@ def test_ai_manager_stores_brain_action() -> None:
     assert manager.last_action.name == "generate_response"
 
 
-def test_ai_manager_executes_brain_action():
+def test_ai_manager_executes_runtime_action():
     registry = ToolRegistry()
 
     registry.register(
         CalculatorTool(),
+    )
+
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
     )
 
     manager = AIManager(
@@ -637,7 +674,40 @@ def test_ai_manager_executes_brain_action():
         Session(InMemoryMemory()),
         registry,
         ToolRunner(registry),
-        brain=Brain(),
+        runtime=runtime,
+    )
+
+    result = manager.respond(
+        "2+2 hesapla",
+    )
+
+    assert result == "4"
+
+
+def test_ai_manager_runs_through_agent_runtime():
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
+
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+    )
+
+    manager = AIManager(
+        DummyProvider(),
+        Session(InMemoryMemory()),
+        registry,
+        ToolRunner(registry),
+        runtime=runtime,
     )
 
     result = manager.respond(

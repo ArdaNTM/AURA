@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import inspect
 from typing import Any
 
 from aura.ai.providers.base import AIProvider
 from aura.ai.tool_call import ToolCall
 from aura.ai.tool_runner import ToolRunner
-from aura.brain.brain import Brain
-from aura.brain.executor import PlanExecutor
+from aura.brain.runtime import AgentRuntime
 from aura.context.builder import ContextBuilder
 from aura.core.ai_events import (
     AIResponseCompleted,
@@ -36,8 +34,7 @@ class AIManager:
         max_tool_calls: int = 5,
         event_bus: EventBus | None = None,
         context_builder: ContextBuilder | None = None,
-        brain: Brain | None = None,
-        executor: PlanExecutor | None = None,
+        runtime: AgentRuntime | None = None,
     ) -> None:
         self._provider = provider
         self._session = session
@@ -46,8 +43,7 @@ class AIManager:
         self._max_tool_calls = max_tool_calls
         self._event_bus = event_bus
         self._context_builder = context_builder
-        self._brain = brain
-        self._executor = executor
+        self._runtime = runtime
         self._last_action = None
 
     @property
@@ -71,19 +67,17 @@ class AIManager:
         return self._max_tool_calls
 
     @property
-    def brain(self) -> Brain | None:
-        return self._brain
+    def runtime(self) -> AgentRuntime | None:
+        """Return agent runtime."""
 
-    @property
-    def executor(self) -> PlanExecutor | None:
-        return self._executor
+        return self._runtime
 
     @property
     def last_action(self) -> object | None:
         return self._last_action
 
     def build_brain_metadata(self) -> dict[str, object]:
-        """Return current brain decision metadata."""
+        """Return current runtime decision metadata."""
 
         if not self._last_action:
             return {}
@@ -124,25 +118,6 @@ class AIManager:
             name,
             *args,
             **kwargs,
-        )
-
-    def run_brain_action(
-        self,
-    ) -> ToolResult | None:
-        """Execute selected brain action."""
-
-        if not self._last_action:
-            return None
-
-        if self._last_action.name != "execute_tool":
-            return None
-
-        if not self._last_action.tool_name:
-            return None
-
-        return self._tool_runner.run(
-            self._last_action.tool_name,
-            **self._last_action.parameters,
         )
 
     def execute_tool_call(
@@ -230,30 +205,6 @@ class AIManager:
             self._tools.openai_schemas(),
         )
 
-    def think(
-        self,
-        user_message: str,
-        memories: list[tuple[str, str]],
-    ) -> None:
-        """Run brain analysis safely."""
-
-        if not self._brain:
-            return
-
-        parameters = inspect.signature(
-            self._brain.think,
-        ).parameters
-
-        if "memories" in parameters:
-            _, self._last_action = self._brain.think(
-                user_message,
-                memories=memories,
-            )
-        else:
-            _, self._last_action = self._brain.think(
-                user_message,
-            )
-
     def respond(
         self,
         user_message: str,
@@ -274,30 +225,15 @@ class AIManager:
             user_message,
         )
 
-        decision = None
-
-        if self._brain:
-            parameters = inspect.signature(
-                self._brain.think,
-            ).parameters
-
-            if "memories" in parameters:
-                decision, self._last_action = self._brain.think(
-                    user_message,
-                    memories=memories,
-                )
-            else:
-                decision, self._last_action = self._brain.think(
-                    user_message,
-                )
-
-        if decision and self._executor:
-            results = self._executor.execute(
-                decision,
+        if self._runtime:
+            state = self._runtime.run(
+                user_message,
             )
 
-            if results:
-                message = results[-1].output
+            self._last_action = state.action
+
+            if state.output:
+                message = state.output
 
                 self._session.add_assistant_message(
                     message,
@@ -310,23 +246,6 @@ class AIManager:
                 )
 
                 return message
-
-        brain_result = self.run_brain_action()
-
-        if brain_result:
-            message = brain_result.output
-
-            self._session.add_assistant_message(
-                message,
-            )
-
-            self.emit(
-                AIResponseCompleted(
-                    message,
-                )
-            )
-
-            return message
 
         history, tools = self.build_context(
             memories=memories,

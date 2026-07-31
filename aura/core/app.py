@@ -7,6 +7,7 @@ from aura.ai.manager import AIManager
 from aura.ai.tool_runner import ToolRunner
 from aura.brain.brain import Brain
 from aura.brain.executor import PlanExecutor
+from aura.brain.runtime import AgentRuntime
 from aura.config.settings import Settings
 from aura.context.builder import ContextBuilder
 from aura.core.container import Container
@@ -79,6 +80,30 @@ class AuraApplication:
         )
 
         self.container.register_factory(
+            Brain,
+            lambda c: Brain(
+                tools=c.resolve(ToolRegistry),
+                memory=c.resolve(Memory),
+            ),
+        )
+
+        self.container.register_factory(
+            PlanExecutor,
+            lambda c: PlanExecutor(
+                c.resolve(ToolRunner),
+            ),
+        )
+
+        self.container.register_factory(
+            AgentRuntime,
+            lambda c: AgentRuntime(
+                c.resolve(Brain),
+                c.resolve(PlanExecutor),
+                c.resolve(Memory),
+            ),
+        )
+
+        self.container.register_factory(
             AIManager,
             lambda c: AIManager(
                 ProviderFactory.create(
@@ -89,13 +114,7 @@ class AuraApplication:
                 c.resolve(ToolRunner),
                 event_bus=c.resolve(EventBus),
                 context_builder=c.resolve(ContextBuilder),
-                brain=Brain(
-                    tools=c.resolve(ToolRegistry),
-                    memory=c.resolve(Memory),
-                ),
-                executor=PlanExecutor(
-                    c.resolve(ToolRunner),
-                ),
+                runtime=c.resolve(AgentRuntime),
             ),
         )
 
