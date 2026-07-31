@@ -6,6 +6,7 @@ from aura.brain.brain import Brain
 from aura.brain.evaluator import Evaluator
 from aura.brain.executor import PlanExecutor
 from aura.brain.memory_policy import MemoryPolicy
+from aura.brain.reflection_engine import ReflectionEngine
 from aura.brain.state import AgentState
 from aura.memory.base import Memory
 
@@ -20,12 +21,14 @@ class AgentRuntime:
         memory: Memory | None = None,
         memory_policy: MemoryPolicy | None = None,
         evaluator: Evaluator | None = None,
+        reflection_engine: ReflectionEngine | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
         self._memory = memory
         self._memory_policy = memory_policy or MemoryPolicy()
         self._evaluator = evaluator or Evaluator()
+        self._reflection_engine = reflection_engine or ReflectionEngine()
 
     @property
     def brain(self) -> Brain:
@@ -56,6 +59,12 @@ class AgentRuntime:
         """Return evaluator."""
 
         return self._evaluator
+
+    @property
+    def reflection_engine(self) -> ReflectionEngine:
+        """Return reflection engine."""
+
+        return self._reflection_engine
 
     def run(
         self,
@@ -99,8 +108,16 @@ class AgentRuntime:
                 observation,
             )
 
+            reflection = self._reflection_engine.reflect(
+                evaluated,
+            )
+
             state.add_observation(
                 evaluated,
+            )
+
+            state.set_reflection(
+                reflection,
             )
 
             self._store_observation(

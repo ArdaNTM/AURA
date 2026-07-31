@@ -9,6 +9,7 @@ from aura.brain.brain import Brain
 from aura.brain.evaluator import Evaluator
 from aura.brain.executor import PlanExecutor
 from aura.brain.memory_policy import MemoryPolicy
+from aura.brain.reflection_engine import ReflectionEngine
 from aura.brain.runtime import AgentRuntime
 from aura.config.settings import Settings
 from aura.context.builder import ContextBuilder
@@ -107,6 +108,11 @@ class AuraApplication:
         )
 
         self.container.register_factory(
+            ReflectionEngine,
+            lambda _: ReflectionEngine(),
+        )
+
+        self.container.register_factory(
             AgentRuntime,
             lambda c: AgentRuntime(
                 c.resolve(Brain),
@@ -114,6 +120,7 @@ class AuraApplication:
                 c.resolve(Memory),
                 c.resolve(MemoryPolicy),
                 c.resolve(Evaluator),
+                c.resolve(ReflectionEngine),
             ),
         )
 

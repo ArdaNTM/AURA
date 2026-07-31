@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from aura.brain.decision import Action
 from aura.brain.models import Decision
 from aura.brain.observation import Observation
+from aura.brain.reflection import Reflection
 
 
 @dataclass
@@ -23,6 +24,8 @@ class AgentState:
         default_factory=list,
     )
 
+    reflection: Reflection | None = None
+
     completed: bool = False
 
     metadata: dict[str, object] = field(
@@ -38,6 +41,14 @@ class AgentState:
         self.observations.append(
             observation,
         )
+
+    def set_reflection(
+        self,
+        reflection: Reflection,
+    ) -> None:
+        """Store reflection result."""
+
+        self.reflection = reflection
 
     @property
     def latest_observation(

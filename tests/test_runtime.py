@@ -169,3 +169,52 @@ def test_agent_runtime_evaluates_observations():
     assert state.observations[0].score == 0.75
 
     assert state.observations[0].feedback == "custom evaluation"
+
+
+def test_agent_runtime_creates_reflection():
+    class TrackingReflectionEngine:
+        def __init__(self) -> None:
+            self.called = False
+
+        def reflect(
+            self,
+            observation,
+        ):
+            from aura.brain.reflection import Reflection
+
+            self.called = True
+
+            return Reflection(
+                success=True,
+                summary="custom reflection",
+            )
+
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
+
+    reflection_engine = TrackingReflectionEngine()
+
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+        reflection_engine=reflection_engine,
+    )
+
+    state = runtime.run(
+        "2+2 hesapla",
+    )
+
+    assert reflection_engine.called
+
+    assert state.reflection is not None
+
+    assert state.reflection.summary == "custom reflection"
