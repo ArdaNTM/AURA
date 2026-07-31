@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -15,4 +15,12 @@ class Observation:
 
     success: bool = True
 
-    metadata: dict[str, object] | None = None
+    score: float = 0.0
+
+    feedback: str | None = None
+
+    retry_needed: bool = False
+
+    metadata: dict[str, object] = field(
+        default_factory=dict,
+    )

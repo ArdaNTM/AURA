@@ -6,6 +6,7 @@ from aura.ai.factory import ProviderFactory
 from aura.ai.manager import AIManager
 from aura.ai.tool_runner import ToolRunner
 from aura.brain.brain import Brain
+from aura.brain.evaluator import Evaluator
 from aura.brain.executor import PlanExecutor
 from aura.brain.memory_policy import MemoryPolicy
 from aura.brain.runtime import AgentRuntime
@@ -101,12 +102,18 @@ class AuraApplication:
         )
 
         self.container.register_factory(
+            Evaluator,
+            lambda _: Evaluator(),
+        )
+
+        self.container.register_factory(
             AgentRuntime,
             lambda c: AgentRuntime(
                 c.resolve(Brain),
                 c.resolve(PlanExecutor),
                 c.resolve(Memory),
                 c.resolve(MemoryPolicy),
+                c.resolve(Evaluator),
             ),
         )
 

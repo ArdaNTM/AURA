@@ -115,3 +115,57 @@ def test_agent_runtime_uses_custom_memory_policy():
     history = memory.history()
 
     assert not any("4" in content for _, content in history)
+
+
+def test_agent_runtime_evaluates_observations():
+    class TrackingEvaluator:
+        def __init__(self) -> None:
+            self.called = False
+
+        def evaluate(
+            self,
+            observation,
+        ):
+            self.called = True
+
+            observation.score = 0.75
+            observation.feedback = "custom evaluation"
+
+            return observation
+
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
+
+    evaluator = TrackingEvaluator()
+
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+        evaluator=evaluator,
+    )
+
+    state = runtime.run(
+        "2+2 hesapla",
+    )
+
+    assert evaluator.called
+
+    assert (
+        len(
+            state.observations,
+        )
+        == 1
+    )
+
+    assert state.observations[0].score == 0.75
+
+    assert state.observations[0].feedback == "custom evaluation"

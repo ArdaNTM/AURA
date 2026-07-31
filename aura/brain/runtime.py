@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from aura.brain.brain import Brain
+from aura.brain.evaluator import Evaluator
 from aura.brain.executor import PlanExecutor
 from aura.brain.memory_policy import MemoryPolicy
 from aura.brain.state import AgentState
@@ -18,11 +19,13 @@ class AgentRuntime:
         executor: PlanExecutor,
         memory: Memory | None = None,
         memory_policy: MemoryPolicy | None = None,
+        evaluator: Evaluator | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
         self._memory = memory
         self._memory_policy = memory_policy or MemoryPolicy()
+        self._evaluator = evaluator or Evaluator()
 
     @property
     def brain(self) -> Brain:
@@ -47,6 +50,12 @@ class AgentRuntime:
         """Return memory policy."""
 
         return self._memory_policy
+
+    @property
+    def evaluator(self) -> Evaluator:
+        """Return evaluator."""
+
+        return self._evaluator
 
     def run(
         self,
@@ -86,12 +95,16 @@ class AgentRuntime:
         )
 
         for observation in observations:
-            state.add_observation(
+            evaluated = self._evaluator.evaluate(
                 observation,
             )
 
+            state.add_observation(
+                evaluated,
+            )
+
             self._store_observation(
-                observation,
+                evaluated,
             )
 
         state.metadata["observation_count"] = len(

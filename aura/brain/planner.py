@@ -42,6 +42,12 @@ class Planner:
                 target=self._select_tool(
                     "calculation",
                 ),
+                priority="normal",
+                risk_level="low",
+                strategy="tool_execution",
+                explanation=(
+                    "Matematiksel işlem olduğu için " "hesaplama aracı kullanılmalı."
+                ),
                 plan=[
                     PlanStep(
                         description="Analyze calculation request",
@@ -64,6 +70,10 @@ class Planner:
             intent="conversation",
             confidence=0.7,
             requires_tool=False,
+            priority="normal",
+            risk_level="low",
+            strategy="direct_answer",
+            explanation=("Kullanıcı normal sohbet yanıtı istiyor."),
             plan=[
                 PlanStep(
                     description="Generate conversational response",
@@ -82,11 +92,11 @@ class Planner:
             keyword in message
             for keyword in [
                 "hesapla",
-                "kaÃƒÂ§",
+                "kaç",
                 "topla",
-                "ÃƒÂ§Ã„Â±kar",
-                "ÃƒÂ§arp",
-                "bÃƒÂ¶l",
+                "çıkar",
+                "çarp",
+                "böl",
             ]
         )
 

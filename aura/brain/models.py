@@ -32,6 +32,14 @@ class Decision:
 
     target: str | None = None
 
+    priority: str = "normal"
+
+    risk_level: str = "low"
+
+    strategy: str | None = None
+
+    explanation: str | None = None
+
     plan: list[PlanStep] = field(
         default_factory=list,
     )
