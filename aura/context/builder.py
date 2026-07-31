@@ -25,22 +25,24 @@ class ContextBuilder:
     def build(
         self,
         query: str | None = None,
+        memories: list[tuple[str, str]] | None = None,
         metadata: dict[str, object] | None = None,
     ) -> AIContext:
         """Create current AI context."""
 
-        memories: list[tuple[str, str]] = []
+        if memories is None:
+            memories = []
 
-        if query:
-            memories = self._memory.search(
-                query,
-            )
+            if query:
+                memories = self._memory.search(
+                    query,
+                )
 
         system_prompt = build_system_prompt(
             memories,
         )
 
-        messages = []
+        messages: list[dict[str, str]] = []
 
         if system_prompt:
             messages.append(

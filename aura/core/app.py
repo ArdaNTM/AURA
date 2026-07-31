@@ -91,6 +91,7 @@ class AuraApplication:
                 context_builder=c.resolve(ContextBuilder),
                 brain=Brain(
                     tools=c.resolve(ToolRegistry),
+                    memory=c.resolve(Memory),
                 ),
                 executor=PlanExecutor(
                     c.resolve(ToolRunner),

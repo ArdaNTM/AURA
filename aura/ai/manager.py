@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 from aura.ai.providers.base import AIProvider
@@ -74,10 +75,12 @@ class AIManager:
         return self._brain
 
     @property
-    def executor(
-        self,
-    ) -> PlanExecutor | None:
+    def executor(self) -> PlanExecutor | None:
         return self._executor
+
+    @property
+    def last_action(self) -> object | None:
+        return self._last_action
 
     def build_brain_metadata(self) -> dict[str, object]:
         """Return current brain decision metadata."""
@@ -89,14 +92,6 @@ class AIManager:
             "action": self._last_action.name,
             "reason": self._last_action.reason,
         }
-
-    @property
-    def last_action(self) -> object | None:
-        return getattr(
-            self,
-            "_last_action",
-            None,
-        )
 
     def emit(
         self,
@@ -113,7 +108,7 @@ class AIManager:
         self,
         provider: AIProvider,
     ) -> None:
-        """Replace the active AI provider."""
+        """Replace active provider."""
 
         self._provider = provider
 
@@ -123,7 +118,7 @@ class AIManager:
         *args: Any,
         **kwargs: Any,
     ) -> ToolResult:
-        """Execute a registered tool."""
+        """Execute registered tool."""
 
         return self._tool_runner.run(
             name,
@@ -134,7 +129,7 @@ class AIManager:
     def run_brain_action(
         self,
     ) -> ToolResult | None:
-        """Execute tool selected by the brain action."""
+        """Execute selected brain action."""
 
         if not self._last_action:
             return None
@@ -154,7 +149,7 @@ class AIManager:
         self,
         call: ToolCall,
     ) -> ToolResult:
-        """Execute a tool requested by an AI provider."""
+        """Execute provider requested tool."""
 
         self.emit(
             ToolStarted(
@@ -188,7 +183,7 @@ class AIManager:
         self,
         result: ToolResult,
     ) -> dict[str, str]:
-        """Convert tool result into provider message format."""
+        """Convert tool result."""
 
         return {
             "role": "tool",
@@ -200,7 +195,7 @@ class AIManager:
         call: ToolCall,
         result: ToolResult,
     ) -> dict[str, str]:
-        """Convert tool result into OpenAI function output format."""
+        """Convert tool result to function output."""
 
         return {
             "type": "function_call_output",
@@ -211,6 +206,7 @@ class AIManager:
     def build_context(
         self,
         query: str | None = None,
+        memories: list[tuple[str, str]] | None = None,
     ) -> tuple[
         list[dict[str, str]],
         list[dict[str, object]],
@@ -220,8 +216,10 @@ class AIManager:
         if self._context_builder:
             context = self._context_builder.build(
                 query=query,
+                memories=memories,
                 metadata=self.build_brain_metadata(),
             )
+
             return (
                 context.messages,
                 context.tools,
@@ -232,11 +230,35 @@ class AIManager:
             self._tools.openai_schemas(),
         )
 
+    def think(
+        self,
+        user_message: str,
+        memories: list[tuple[str, str]],
+    ) -> None:
+        """Run brain analysis safely."""
+
+        if not self._brain:
+            return
+
+        parameters = inspect.signature(
+            self._brain.think,
+        ).parameters
+
+        if "memories" in parameters:
+            _, self._last_action = self._brain.think(
+                user_message,
+                memories=memories,
+            )
+        else:
+            _, self._last_action = self._brain.think(
+                user_message,
+            )
+
     def respond(
         self,
         user_message: str,
     ) -> str:
-        """Generate a response for a user message."""
+        """Generate response."""
 
         self.emit(
             AIResponseStarted(
@@ -248,12 +270,26 @@ class AIManager:
             user_message,
         )
 
+        memories = self._session.memory.search(
+            user_message,
+        )
+
         decision = None
 
         if self._brain:
-            decision, self._last_action = self._brain.think(
-                user_message,
-            )
+            parameters = inspect.signature(
+                self._brain.think,
+            ).parameters
+
+            if "memories" in parameters:
+                decision, self._last_action = self._brain.think(
+                    user_message,
+                    memories=memories,
+                )
+            else:
+                decision, self._last_action = self._brain.think(
+                    user_message,
+                )
 
         if decision and self._executor:
             results = self._executor.execute(
@@ -293,7 +329,7 @@ class AIManager:
             return message
 
         history, tools = self.build_context(
-            query=user_message,
+            memories=memories,
         )
 
         response = self._provider.generate_response(
@@ -333,7 +369,9 @@ class AIManager:
             )
 
             history, tools = self.build_context(
-                query=user_message,
+                memories=self._session.memory.search(
+                    user_message,
+                ),
             )
 
             response = self._provider.generate_response(

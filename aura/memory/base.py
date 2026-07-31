@@ -27,16 +27,16 @@ class Memory(ABC):
         """
         Search stored memories.
 
-        Default implementation performs
-        simple keyword matching over history.
+        Performs simple keyword matching
+        using query terms.
         """
 
-        normalized = query.casefold()
+        words = [word for word in query.casefold().split() if len(word) > 2]
 
         return [
             (role, content)
             for role, content in self.history()
-            if normalized in content.casefold()
+            if any(word in content.casefold() for word in words)
         ]
 
     @abstractmethod
