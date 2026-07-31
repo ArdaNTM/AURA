@@ -18,21 +18,16 @@ class Planner:
 
         message = user_message.casefold()
 
-        if any(
-            keyword in message
-            for keyword in [
-                "hesapla",
-                "kaç",
-                "topla",
-                "çıkar",
-                "çarp",
-                "böl",
-            ]
+        if self._is_calculation_request(
+            message,
         ):
             return Decision(
                 intent="calculation",
                 confidence=0.9,
                 requires_tool=True,
+                target=self._select_tool(
+                    "calculation",
+                ),
                 plan=[
                     PlanStep(
                         "Analyze calculation request",
@@ -58,6 +53,35 @@ class Planner:
                 ),
             ],
         )
+
+    def _is_calculation_request(
+        self,
+        message: str,
+    ) -> bool:
+        """Detect calculation intent."""
+
+        return any(
+            keyword in message
+            for keyword in [
+                "hesapla",
+                "kaÃ§",
+                "topla",
+                "Ã§Ä±kar",
+                "Ã§arp",
+                "bÃ¶l",
+            ]
+        )
+
+    def _select_tool(
+        self,
+        intent: str,
+    ) -> str | None:
+        """Select tool for intent."""
+
+        if intent == "calculation":
+            return "calculator"
+
+        return None
 
     def _extract_expression(
         self,

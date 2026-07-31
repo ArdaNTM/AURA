@@ -8,6 +8,7 @@ def test_decision_engine_selects_tool_action():
     decision = Decision(
         intent="calculation",
         requires_tool=True,
+        target="calculator",
         metadata={
             "expression": "2+2",
         },

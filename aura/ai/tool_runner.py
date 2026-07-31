@@ -20,6 +20,7 @@ class ToolRunner:
     @property
     def registry(self) -> ToolRegistry:
         """Return the underlying registry."""
+
         return self._registry
 
     def run(
@@ -29,6 +30,16 @@ class ToolRunner:
         **kwargs: Any,
     ) -> ToolResult:
         """Execute a registered tool."""
+
+        if not self._registry.has(
+            name,
+        ):
+            return ToolResult(
+                name=name,
+                output="",
+                success=False,
+                error=f"Unknown tool '{name}'.",
+            )
 
         return self._registry.execute(
             name,

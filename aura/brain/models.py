@@ -23,6 +23,8 @@ class Decision:
 
     requires_tool: bool = False
 
+    target: str | None = None
+
     plan: list[PlanStep] = field(
         default_factory=list,
     )

@@ -136,6 +136,27 @@ class ToolRegistry:
             self._tools,
         )
 
+    def has(
+        self,
+        name: str,
+    ) -> bool:
+        """Check whether a tool exists."""
+
+        return name in self._tools
+
+    def descriptions(
+        self,
+    ) -> list[dict[str, str]]:
+        """Return available tool descriptions."""
+
+        return [
+            {
+                "name": tool.name,
+                "description": tool.description,
+            }
+            for tool in self._tools.values()
+        ]
+
     def schemas(self) -> list[dict[str, Any]]:
         """Return AURA schemas."""
 

@@ -32,24 +32,32 @@ class DecisionEngine:
         """Select next action."""
 
         if decision.requires_tool:
-            parameters: dict[str, object] = {}
-
-            if decision.intent == "calculation":
-                parameters = {
-                    "expression": decision.metadata.get(
-                        "expression",
-                        "",
-                    )
-                }
-
             return Action(
                 name="execute_tool",
                 reason=(f"Intent '{decision.intent}' " "requires a tool."),
-                tool_name="calculator",
-                parameters=parameters,
+                tool_name=decision.target,
+                parameters=self._build_parameters(
+                    decision,
+                ),
             )
 
         return Action(
             name="generate_response",
             reason=(f"Intent '{decision.intent}' " "can be handled conversationally."),
         )
+
+    def _build_parameters(
+        self,
+        decision: Decision,
+    ) -> dict[str, object]:
+        """Build tool parameters from decision metadata."""
+
+        if decision.intent == "calculation":
+            return {
+                "expression": decision.metadata.get(
+                    "expression",
+                    "",
+                )
+            }
+
+        return {}

@@ -36,3 +36,7 @@ def test_tool_runner_returns_failure() -> None:
     )
 
     assert not result.success
+
+    assert result.name == "missing"
+
+    assert "Unknown tool" in result.error
