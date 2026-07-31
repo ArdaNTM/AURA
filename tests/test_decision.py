@@ -82,3 +82,95 @@ def test_decision_engine_requests_confirmation():
     assert action.metadata["risk_level"] == "high"
 
     assert "requires user confirmation" in action.reason
+
+
+def test_decision_engine_requests_confirmation_for_low_confidence_tool():
+    engine = DecisionEngine()
+
+    decision = Decision(
+        intent="calculation",
+        requires_tool=True,
+        target="calculator",
+        strategy="tool_execution",
+        confidence=0.3,
+        priority="normal",
+        risk_level="low",
+    )
+
+    action = engine.decide(
+        decision,
+    )
+
+    assert action.name == "request_confirmation"
+
+    assert action.tool_name is None
+
+    assert "confidence is too low" in action.reason
+
+
+def test_decision_engine_allows_high_confidence_tool_execution():
+    engine = DecisionEngine()
+
+    decision = Decision(
+        intent="calculation",
+        requires_tool=True,
+        target="calculator",
+        strategy="tool_execution",
+        confidence=0.8,
+        priority="normal",
+        risk_level="low",
+    )
+
+    action = engine.decide(
+        decision,
+    )
+
+    assert action.name == "execute_tool"
+
+    assert action.tool_name == "calculator"
+
+
+def test_decision_engine_requests_confirmation_for_high_risk_tool():
+    engine = DecisionEngine()
+
+    decision = Decision(
+        intent="delete_file",
+        requires_tool=True,
+        target="file_manager",
+        strategy="tool_execution",
+        confidence=0.95,
+        priority="normal",
+        risk_level="high",
+    )
+
+    action = engine.decide(
+        decision,
+    )
+
+    assert action.name == "request_confirmation"
+
+    assert "confidence is too low" not in action.reason
+
+    assert action.metadata["risk_level"] == "high"
+
+
+def test_decision_engine_requests_confirmation_for_medium_risk_low_confidence():
+    engine = DecisionEngine()
+
+    decision = Decision(
+        intent="modify_settings",
+        requires_tool=True,
+        target="settings_tool",
+        strategy="tool_execution",
+        confidence=0.6,
+        priority="normal",
+        risk_level="medium",
+    )
+
+    action = engine.decide(
+        decision,
+    )
+
+    assert action.name == "request_confirmation"
+
+    assert action.metadata["risk_level"] == "medium"

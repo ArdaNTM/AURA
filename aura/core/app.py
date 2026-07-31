@@ -8,6 +8,7 @@ from aura.ai.tool_runner import ToolRunner
 from aura.brain.brain import Brain
 from aura.brain.evaluator import Evaluator
 from aura.brain.executor import PlanExecutor
+from aura.brain.learning import LearningContext
 from aura.brain.memory_policy import MemoryPolicy
 from aura.brain.reflection_engine import ReflectionEngine
 from aura.brain.runtime import AgentRuntime
@@ -87,6 +88,7 @@ class AuraApplication:
             lambda c: Brain(
                 tools=c.resolve(ToolRegistry),
                 memory=c.resolve(Memory),
+                learning_context=c.resolve(LearningContext),
             ),
         )
 
@@ -100,6 +102,13 @@ class AuraApplication:
         self.container.register_factory(
             MemoryPolicy,
             lambda _: MemoryPolicy(),
+        )
+
+        self.container.register_factory(
+            LearningContext,
+            lambda c: LearningContext(
+                c.resolve(Memory).history(),
+            ),
         )
 
         self.container.register_factory(

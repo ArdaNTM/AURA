@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from aura.brain.decision import Action
+from aura.brain.improvement import ImprovementPlan
 from aura.brain.models import Decision
 from aura.brain.observation import Observation
 from aura.brain.reflection import Reflection
@@ -25,6 +26,8 @@ class AgentState:
     )
 
     reflection: Reflection | None = None
+
+    improvement_plan: ImprovementPlan | None = None
 
     completed: bool = False
 
@@ -49,6 +52,14 @@ class AgentState:
         """Store reflection result."""
 
         self.reflection = reflection
+
+    def set_improvement_plan(
+        self,
+        plan: ImprovementPlan,
+    ) -> None:
+        """Store improvement recommendation."""
+
+        self.improvement_plan = plan
 
     @property
     def latest_observation(

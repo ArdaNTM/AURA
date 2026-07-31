@@ -35,6 +35,19 @@ class DecisionEngine:
     ) -> Action:
         """Select next action."""
 
+        if self._requires_confirmation(
+            decision,
+        ):
+            return Action(
+                name="request_confirmation",
+                reason=self._confirmation_reason(
+                    decision,
+                ),
+                metadata=self._build_metadata(
+                    decision,
+                ),
+            )
+
         if decision.strategy == "ask_confirmation":
             return Action(
                 name="request_confirmation",
@@ -64,6 +77,40 @@ class DecisionEngine:
                 decision,
             ),
         )
+
+    def _requires_confirmation(
+        self,
+        decision: Decision,
+    ) -> bool:
+        """Determine whether execution requires confirmation."""
+
+        if not decision.requires_tool:
+            return False
+
+        if decision.confidence < 0.5:
+            return True
+
+        if decision.risk_level == "high":
+            return True
+
+        if decision.risk_level == "medium" and decision.confidence < 0.8:
+            return True
+
+        return False
+
+    def _confirmation_reason(
+        self,
+        decision: Decision,
+    ) -> str:
+        """Explain why confirmation is required."""
+
+        if decision.risk_level == "high":
+            return "Decision risk level is high " "and requires user confirmation."
+
+        if decision.risk_level == "medium" and decision.confidence < 0.8:
+            return "Decision risk level is medium " "with insufficient confidence."
+
+        return "Decision confidence is too low " "for automatic execution."
 
     def _build_parameters(
         self,

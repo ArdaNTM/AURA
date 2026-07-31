@@ -13,6 +13,14 @@ class Reflection:
 
     summary: str
 
+    strategy: str | None = None
+
+    intent: str | None = None
+
+    retry_needed: bool = False
+
+    retry_strategy: str | None = None
+
     improvements: list[str] = field(
         default_factory=list,
     )

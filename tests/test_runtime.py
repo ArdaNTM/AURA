@@ -79,6 +79,42 @@ def test_agent_runtime_stores_observation_memory():
     assert any("4" in content for _, content in history)
 
 
+def test_agent_runtime_stores_reflection_feedback():
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
+
+    memory = InMemoryMemory()
+
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+        memory,
+    )
+
+    runtime.run(
+        "2+2 hesapla",
+    )
+
+    history = memory.history()
+
+    assert any("intent=calculation" in content for _, content in history)
+
+    assert any("strategy=tool_execution" in content for _, content in history)
+
+    assert any("confidence=" in content for _, content in history)
+
+    assert any("success=True" in content for _, content in history)
+
+
 def test_agent_runtime_uses_custom_memory_policy():
     class RejectAllPolicy:
         def should_store(
@@ -179,6 +215,7 @@ def test_agent_runtime_creates_reflection():
         def reflect(
             self,
             observation,
+            decision=None,
         ):
             from aura.brain.reflection import Reflection
 
