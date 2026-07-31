@@ -44,7 +44,6 @@ class AIManager:
         self._event_bus = event_bus
         self._context_builder = context_builder
         self._runtime = runtime
-        self._last_action = None
 
     @property
     def provider(self) -> AIProvider:
@@ -71,21 +70,6 @@ class AIManager:
         """Return agent runtime."""
 
         return self._runtime
-
-    @property
-    def last_action(self) -> object | None:
-        return self._last_action
-
-    def build_brain_metadata(self) -> dict[str, object]:
-        """Return current runtime decision metadata."""
-
-        if not self._last_action:
-            return {}
-
-        return {
-            "action": self._last_action.name,
-            "reason": self._last_action.reason,
-        }
 
     def emit(
         self,
@@ -181,7 +165,6 @@ class AIManager:
     def build_context(
         self,
         query: str | None = None,
-        memories: list[tuple[str, str]] | None = None,
     ) -> tuple[
         list[dict[str, str]],
         list[dict[str, object]],
@@ -191,8 +174,7 @@ class AIManager:
         if self._context_builder:
             context = self._context_builder.build(
                 query=query,
-                memories=memories,
-                metadata=self.build_brain_metadata(),
+                metadata={},
             )
 
             return (
@@ -221,16 +203,10 @@ class AIManager:
             user_message,
         )
 
-        memories = self._session.memory.search(
-            user_message,
-        )
-
         if self._runtime:
             state = self._runtime.run(
                 user_message,
             )
-
-            self._last_action = state.action
 
             if state.output:
                 message = state.output
@@ -248,7 +224,7 @@ class AIManager:
                 return message
 
         history, tools = self.build_context(
-            memories=memories,
+            query=user_message,
         )
 
         response = self._provider.generate_response(
@@ -288,9 +264,7 @@ class AIManager:
             )
 
             history, tools = self.build_context(
-                memories=self._session.memory.search(
-                    user_message,
-                ),
+                query=user_message,
             )
 
             response = self._provider.generate_response(

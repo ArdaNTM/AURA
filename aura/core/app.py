@@ -7,6 +7,7 @@ from aura.ai.manager import AIManager
 from aura.ai.tool_runner import ToolRunner
 from aura.brain.brain import Brain
 from aura.brain.executor import PlanExecutor
+from aura.brain.memory_policy import MemoryPolicy
 from aura.brain.runtime import AgentRuntime
 from aura.config.settings import Settings
 from aura.context.builder import ContextBuilder
@@ -95,11 +96,17 @@ class AuraApplication:
         )
 
         self.container.register_factory(
+            MemoryPolicy,
+            lambda _: MemoryPolicy(),
+        )
+
+        self.container.register_factory(
             AgentRuntime,
             lambda c: AgentRuntime(
                 c.resolve(Brain),
                 c.resolve(PlanExecutor),
                 c.resolve(Memory),
+                c.resolve(MemoryPolicy),
             ),
         )
 

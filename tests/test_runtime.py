@@ -4,6 +4,7 @@ from aura.brain.executor import PlanExecutor
 from aura.brain.runtime import AgentRuntime
 from aura.brain.state import AgentState
 from aura.core.tools import ToolRegistry
+from aura.memory.in_memory import InMemoryMemory
 from aura.tools import CalculatorTool
 
 
@@ -46,3 +47,71 @@ def test_agent_runtime_executes_cycle():
     )
 
     assert state.observations[0].output == "4"
+
+
+def test_agent_runtime_stores_observation_memory():
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
+
+    memory = InMemoryMemory()
+
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+        memory,
+    )
+
+    runtime.run(
+        "2+2 hesapla",
+    )
+
+    history = memory.history()
+
+    assert any("4" in content for _, content in history)
+
+
+def test_agent_runtime_uses_custom_memory_policy():
+    class RejectAllPolicy:
+        def should_store(
+            self,
+            observation,
+        ) -> bool:
+            return False
+
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
+
+    memory = InMemoryMemory()
+
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+        memory,
+        RejectAllPolicy(),
+    )
+
+    runtime.run(
+        "2+2 hesapla",
+    )
+
+    history = memory.history()
+
+    assert not any("4" in content for _, content in history)

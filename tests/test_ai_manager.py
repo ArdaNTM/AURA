@@ -622,7 +622,7 @@ def test_ai_manager_calls_runtime() -> None:
     assert runtime.called
 
 
-def test_ai_manager_stores_runtime_action() -> None:
+def test_ai_manager_runtime_executes_cycle() -> None:
     registry = ToolRegistry()
 
     runtime = AgentRuntime(
@@ -642,13 +642,11 @@ def test_ai_manager_stores_runtime_action() -> None:
         runtime=runtime,
     )
 
-    manager.respond(
+    result = manager.respond(
         "Merhaba",
     )
 
-    assert manager.last_action is not None
-
-    assert manager.last_action.name == "generate_response"
+    assert result == "Merhaba! Ben AURA. Şimdilik çekirdek modundayım."
 
 
 def test_ai_manager_executes_runtime_action():
