@@ -31,3 +31,5 @@ dist/
 # OS
 Thumbs.db
 .DS_Store
+
+learning_profile.json

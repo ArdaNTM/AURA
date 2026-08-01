@@ -6,6 +6,8 @@ from aura.brain.brain import Brain
 from aura.brain.evaluator import Evaluator
 from aura.brain.executor import PlanExecutor
 from aura.brain.improvement import ImprovementPlan
+from aura.brain.learning_profile import LearningProfile
+from aura.brain.learning_profile_store import LearningProfileStore
 from aura.brain.memory_policy import MemoryPolicy
 from aura.brain.performance_engine import PerformanceEngine
 from aura.brain.reflection_engine import ReflectionEngine
@@ -25,6 +27,8 @@ class AgentRuntime:
         evaluator: Evaluator | None = None,
         reflection_engine: ReflectionEngine | None = None,
         performance_engine: PerformanceEngine | None = None,
+        learning_profile: LearningProfile | None = None,
+        learning_profile_store: LearningProfileStore | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
@@ -33,48 +37,84 @@ class AgentRuntime:
         self._evaluator = evaluator or Evaluator()
         self._reflection_engine = reflection_engine or ReflectionEngine()
         self._performance_engine = performance_engine or PerformanceEngine()
+        self._learning_profile_store = learning_profile_store or LearningProfileStore()
+
+        if learning_profile is None:
+            self._learning_profile = self._learning_profile_store.load()
+        else:
+            self._learning_profile = learning_profile
 
     @property
-    def brain(self) -> Brain:
+    def brain(
+        self,
+    ) -> Brain:
         """Return brain instance."""
 
         return self._brain
 
     @property
-    def executor(self) -> PlanExecutor:
+    def executor(
+        self,
+    ) -> PlanExecutor:
         """Return executor instance."""
 
         return self._executor
 
     @property
-    def memory(self) -> Memory | None:
+    def memory(
+        self,
+    ) -> Memory | None:
         """Return memory instance."""
 
         return self._memory
 
     @property
-    def memory_policy(self) -> MemoryPolicy:
+    def memory_policy(
+        self,
+    ) -> MemoryPolicy:
         """Return memory policy."""
 
         return self._memory_policy
 
     @property
-    def evaluator(self) -> Evaluator:
+    def evaluator(
+        self,
+    ) -> Evaluator:
         """Return evaluator."""
 
         return self._evaluator
 
     @property
-    def reflection_engine(self) -> ReflectionEngine:
+    def reflection_engine(
+        self,
+    ) -> ReflectionEngine:
         """Return reflection engine."""
 
         return self._reflection_engine
 
     @property
-    def performance_engine(self) -> PerformanceEngine:
+    def performance_engine(
+        self,
+    ) -> PerformanceEngine:
         """Return performance engine."""
 
         return self._performance_engine
+
+    @property
+    def learning_profile(
+        self,
+    ) -> LearningProfile:
+        """Return learning profile."""
+
+        return self._learning_profile
+
+    @property
+    def learning_profile_store(
+        self,
+    ) -> LearningProfileStore:
+        """Return learning profile store."""
+
+        return self._learning_profile_store
 
     def run(
         self,
@@ -142,6 +182,16 @@ class AgentRuntime:
                 evaluated,
             )
 
+            if decision:
+                self._learning_profile.register_task(
+                    success=reflection.success,
+                    strategy=decision.strategy,
+                )
+
+                self._learning_profile_store.save(
+                    self._learning_profile,
+                )
+
             self._store_observation(
                 evaluated,
                 reflection,
@@ -157,6 +207,13 @@ class AgentRuntime:
             "average_score": report.average_score,
             "retry_rate": report.retry_rate,
             "performance_score": report.performance_score,
+        }
+
+        state.metadata["learning_profile"] = {
+            "total_tasks": self._learning_profile.total_tasks,
+            "successful_tasks": self._learning_profile.successful_tasks,
+            "failed_tasks": self._learning_profile.failed_tasks,
+            "success_rate": self._learning_profile.success_rate,
         }
 
         state.metadata["observation_count"] = len(

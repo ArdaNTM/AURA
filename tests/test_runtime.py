@@ -1,6 +1,7 @@
 from aura.ai.tool_runner import ToolRunner
 from aura.brain.brain import Brain
 from aura.brain.executor import PlanExecutor
+from aura.brain.learning_profile import LearningProfile
 from aura.brain.runtime import AgentRuntime
 from aura.brain.state import AgentState
 from aura.core.tools import ToolRegistry
@@ -255,3 +256,49 @@ def test_agent_runtime_creates_reflection():
     assert state.reflection is not None
 
     assert state.reflection.summary == "custom reflection"
+
+
+def test_agent_runtime_updates_learning_profile():
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
+
+    profile = LearningProfile()
+
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+        learning_profile=profile,
+    )
+
+    state = runtime.run(
+        "2+2 hesapla",
+    )
+
+    assert profile.total_tasks == 1
+
+    assert profile.successful_tasks == 1
+
+    assert profile.failed_tasks == 0
+
+    assert profile.strategy_usage["tool_execution"] == 1
+
+    assert profile.strategy_success["tool_execution"] == 1
+
+    learning = state.metadata["learning_profile"]
+
+    assert learning["total_tasks"] == 1
+
+    assert learning["successful_tasks"] == 1
+
+    assert learning["failed_tasks"] == 0
+
+    assert learning["success_rate"] == 1.0
