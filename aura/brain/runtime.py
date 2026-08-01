@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from aura.brain.brain import Brain
 from aura.brain.evaluator import Evaluator
+from aura.brain.execution_plan import ExecutionPlan
 from aura.brain.executor import PlanExecutor
+from aura.brain.goal import Goal
 from aura.brain.improvement import ImprovementPlan
 from aura.brain.learning_profile import LearningProfile
 from aura.brain.learning_profile_store import LearningProfileStore
@@ -122,8 +124,12 @@ class AgentRuntime:
     ) -> AgentState:
         """Run one agent cycle."""
 
+        goal = Goal(
+            description=user_message,
+        )
+
         state = AgentState(
-            goal=user_message,
+            goal=goal,
         )
 
         memories = []
@@ -144,6 +150,32 @@ class AgentRuntime:
 
         state.decision = decision
         state.action = action
+
+        if decision:
+            execution_plan = ExecutionPlan(
+                goal=goal.description,
+                steps=decision.plan,
+            )
+
+            state.set_execution_plan(
+                execution_plan,
+            )
+
+            state.metadata["intent"] = decision.intent
+            state.metadata["confidence"] = decision.confidence
+
+            state.metadata["execution_plan"] = {
+                "total_steps": len(
+                    execution_plan.steps,
+                ),
+                "completed_steps": execution_plan.completed_steps,
+                "is_complete": execution_plan.is_complete(),
+            }
+
+            self._apply_improvement_plan(
+                state,
+                decision,
+            )
 
         if decision:
             state.metadata["intent"] = decision.intent
@@ -201,6 +233,10 @@ class AgentRuntime:
         report = self._performance_engine.evaluate(
             evaluated_observations,
         )
+
+        state.metadata["goal"] = {
+            "description": goal.description,
+        }
 
         state.metadata["performance"] = {
             "success_rate": report.success_rate,

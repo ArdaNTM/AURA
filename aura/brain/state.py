@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from aura.brain.decision import Action
+from aura.brain.execution_plan import ExecutionPlan
+from aura.brain.goal import Goal
 from aura.brain.improvement import ImprovementPlan
 from aura.brain.models import Decision
 from aura.brain.observation import Observation
@@ -15,11 +17,13 @@ from aura.brain.reflection import Reflection
 class AgentState:
     """Runtime state of an agent execution."""
 
-    goal: str
+    goal: Goal
 
     decision: Decision | None = None
 
     action: Action | None = None
+
+    execution_plan: ExecutionPlan | None = None
 
     observations: list[Observation] = field(
         default_factory=list,
@@ -60,6 +64,14 @@ class AgentState:
         """Store improvement recommendation."""
 
         self.improvement_plan = plan
+
+    def set_execution_plan(
+        self,
+        execution_plan: ExecutionPlan,
+    ) -> None:
+        """Store execution plan."""
+
+        self.execution_plan = execution_plan
 
     @property
     def latest_observation(

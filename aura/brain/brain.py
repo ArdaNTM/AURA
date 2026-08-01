@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from aura.brain.decision import Action, DecisionEngine
+from aura.brain.goal import Goal
 from aura.brain.learning import LearningContext
 from aura.brain.meta_learner import MetaLearner
 from aura.brain.models import Decision
@@ -62,12 +63,26 @@ class Brain:
     def meta_learner(self) -> MetaLearner:
         return self._meta_learner
 
+    def create_goal(
+        self,
+        user_message: str,
+    ) -> Goal:
+        """Create an execution goal from user input."""
+
+        return Goal(
+            description=user_message,
+        )
+
     def think(
         self,
         user_message: str,
         memories: list[tuple[str, str]] | None = None,
     ) -> tuple[Decision, Action]:
         """Analyze a request and select an action."""
+
+        goal = self.create_goal(
+            user_message,
+        )
 
         learning = None
 
@@ -124,7 +139,7 @@ class Brain:
                 )
 
         decision = self._planner.decide(
-            user_message,
+            goal.description,
             learning=learning,
         )
 
@@ -133,6 +148,13 @@ class Brain:
 
         if learning:
             decision.metadata["learning"] = learning
+
+        decision.metadata["goal"] = {
+            "description": goal.description,
+            "completed": goal.completed,
+            "progress": goal.progress,
+            "priority": goal.priority,
+        }
 
         action = self._decision_engine.decide(
             decision,
