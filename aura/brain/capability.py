@@ -23,6 +23,8 @@ class Capability:
 
     default_tool: str | None = None
 
+    allowed_tools: tuple[str, ...] = ()
+
     requires_permission: bool = False
 
     risk_level: str = "low"
@@ -46,12 +48,14 @@ class CapabilityRegistry:
                 description="Mathematical calculations",
                 requires_tool=True,
                 default_tool="calculator",
+                allowed_tools=("calculator",),
                 risk_level="low",
             ),
             "search": Capability(
                 name="search",
                 description="Search the web",
                 requires_tool=True,
+                allowed_tools=("search",),
                 risk_level="low",
             ),
             "coding": Capability(
@@ -64,6 +68,7 @@ class CapabilityRegistry:
                 description="Read and write files",
                 requires_tool=True,
                 requires_permission=True,
+                allowed_tools=("filesystem",),
                 risk_level="medium",
             ),
             "computer": Capability(
@@ -71,6 +76,7 @@ class CapabilityRegistry:
                 description="Control the computer",
                 requires_tool=True,
                 requires_permission=True,
+                allowed_tools=("computer",),
                 risk_level="high",
             ),
             "memory": Capability(
@@ -128,3 +134,22 @@ class CapabilityRegistry:
         return self._tools.has(
             capability.default_tool,
         )
+
+    def validate_tool(
+        self,
+        capability_name: str,
+        tool_name: str,
+    ) -> bool:
+        """Check whether tool is allowed for capability."""
+
+        capability = self.get(
+            capability_name,
+        )
+
+        if not capability.requires_tool:
+            return False
+
+        if not capability.allowed_tools:
+            return False
+
+        return tool_name in capability.allowed_tools
