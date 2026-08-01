@@ -155,8 +155,12 @@ class AgentRuntime:
         state.decision = decision
         state.action = action
 
-        if decision and not self._permission_gate.can_execute(
-            decision,
+        if (
+            decision
+            and decision.requires_permission
+            and not self._permission_gate.can_execute(
+                decision,
+            )
         ):
             capability = decision.metadata.get(
                 "capability",

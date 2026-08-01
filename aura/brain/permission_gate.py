@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from aura.brain.models import Decision
 from aura.brain.permission import PermissionManager
+from aura.brain.permission_policy import PermissionPolicy
 
 
 class PermissionGate:
@@ -12,16 +13,10 @@ class PermissionGate:
     def __init__(
         self,
         permission_manager: PermissionManager | None = None,
+        policy: PermissionPolicy | None = None,
     ) -> None:
         self._permission_manager = permission_manager or PermissionManager()
-
-    @property
-    def permission_manager(
-        self,
-    ) -> PermissionManager:
-        """Return permission manager."""
-
-        return self._permission_manager
+        self._policy = policy or PermissionPolicy()
 
     def can_execute(
         self,
@@ -29,8 +24,15 @@ class PermissionGate:
     ) -> bool:
         """Check whether decision can execute."""
 
-        if not decision.requires_permission:
-            return True
+        policy_result = self._policy.evaluate(
+            capability=decision.intent,
+            risk_level=decision.risk_level,
+            confidence=decision.confidence,
+            requires_permission=decision.requires_permission,
+        )
+
+        if policy_result.action == "ask":
+            return False
 
         capability = decision.metadata.get(
             "capability",
