@@ -27,7 +27,9 @@ class Planner:
         self._tools = tools
         self._plan_builder = plan_builder or PlanBuilder()
         self._intent_engine = intent_engine or IntentEngine()
-        self._capabilities = capability_registry or CapabilityRegistry()
+        self._capabilities = capability_registry or CapabilityRegistry(
+            tools=tools,
+        )
 
     def decide(
         self,

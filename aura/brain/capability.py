@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from aura.core.tools import ToolRegistry
 
 
 @dataclass(
@@ -29,7 +33,9 @@ class CapabilityRegistry:
 
     def __init__(
         self,
+        tools: ToolRegistry | None = None,
     ) -> None:
+        self._tools = tools
         self._capabilities: dict[str, Capability] = {
             "conversation": Capability(
                 name="conversation",
@@ -98,4 +104,27 @@ class CapabilityRegistry:
 
         return list(
             self._capabilities.values(),
+        )
+
+    def is_available(
+        self,
+        name: str,
+    ) -> bool:
+        """Check whether capability can currently execute."""
+
+        capability = self.get(
+            name,
+        )
+
+        if not capability.requires_tool:
+            return True
+
+        if not capability.default_tool:
+            return False
+
+        if not self._tools:
+            return False
+
+        return self._tools.has(
+            capability.default_tool,
         )
