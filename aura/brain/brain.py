@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from aura.brain.decision import Action, DecisionEngine
+from aura.brain.decision_context import DecisionContext
 from aura.brain.goal import Goal
 from aura.brain.learning import LearningContext
 from aura.brain.meta_learner import MetaLearner
@@ -138,9 +139,15 @@ class Brain:
                     strategy_scores.values(),
                 )
 
-        decision = self._planner.decide(
-            goal.description,
-            learning=learning,
+        context = self.create_context(
+            user_message,
+            goal,
+            learning,
+            memories,
+        )
+
+        decision = self._planner.decide_with_context(
+            context,
         )
 
         if memories:
@@ -233,3 +240,22 @@ class Brain:
                     )
 
         return scores
+
+    def create_context(
+        self,
+        user_message: str,
+        goal: Goal,
+        learning: dict[str, object] | None = None,
+        memories: list[tuple[str, str]] | None = None,
+    ) -> DecisionContext:
+        """Create decision context."""
+
+        return DecisionContext(
+            user_message=user_message,
+            goal=goal,
+            learning=learning or {},
+            memory=memories or [],
+            metadata={
+                "goal_description": goal.description,
+            },
+        )

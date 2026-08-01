@@ -6,6 +6,19 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+class IntentAnalysis:
+    """Result of intent analysis."""
+
+    intent: str
+
+    confidence: float = 1.0
+
+    entities: dict[str, object] = field(
+        default_factory=dict,
+    )
+
+
+@dataclass
 class PlanStep:
     """Single step in an execution plan."""
 
@@ -29,6 +42,8 @@ class Decision:
     confidence: float = 0.0
 
     requires_tool: bool = False
+
+    requires_permission: bool = False
 
     target: str | None = None
 

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
-from aura.brain.models import Decision, PlanStep
+from aura.brain.capability import CapabilityRegistry
+from aura.brain.decision_context import DecisionContext
+from aura.brain.intent import IntentEngine
+from aura.brain.models import Decision, IntentAnalysis
+from aura.brain.plan_builder import PlanBuilder
 
 if TYPE_CHECKING:
     from aura.core.tools import ToolRegistry
@@ -17,8 +20,14 @@ class Planner:
     def __init__(
         self,
         tools: ToolRegistry | None = None,
+        plan_builder: PlanBuilder | None = None,
+        intent_engine: IntentEngine | None = None,
+        capability_registry: CapabilityRegistry | None = None,
     ) -> None:
         self._tools = tools
+        self._plan_builder = plan_builder or PlanBuilder()
+        self._intent_engine = intent_engine or IntentEngine()
+        self._capabilities = capability_registry or CapabilityRegistry()
 
     def decide(
         self,
@@ -27,75 +36,113 @@ class Planner:
     ) -> Decision:
         """Analyze request and create a decision."""
 
-        message = user_message.casefold()
+        analysis = self._intent_engine.classify(
+            user_message,
+        )
 
-        if self._is_calculation_request(
-            message,
-        ):
-            expression = self._extract_expression(
-                user_message,
-            )
+        capability = self._capabilities.get(
+            analysis.intent,
+        )
 
-            metadata = {
-                "expression": expression,
-            }
-
-            if learning:
-                metadata["learning"] = learning
-
-            strategy, risk_level, confidence = self._adaptive_strategy(
+        if capability.name == "calculation":
+            return self._build_calculation(
+                capability,
+                analysis,
                 learning,
             )
 
-            return Decision(
-                intent="calculation",
-                confidence=confidence,
-                requires_tool=True,
-                target=self._select_tool(
-                    "calculation",
-                ),
-                priority="normal",
-                risk_level=risk_level,
-                strategy=strategy,
-                explanation=(
-                    "Matematiksel iÅŸlem olduÄŸu iÃ§in "
-                    "hesaplama aracÄ± kullanÄ±lmalÄ±."
-                ),
-                plan=[
-                    PlanStep(
-                        description="Analyze calculation request",
-                        action="analyze",
-                    ),
-                    PlanStep(
-                        description="Calculate expression",
-                        action="calculator",
-                        metadata={
-                            "expression": expression,
-                        },
-                    ),
-                ],
-                metadata=metadata,
-            )
+        return self._build_conversation(
+            capability,
+            learning,
+        )
 
-        metadata = {}
+    def decide_with_context(
+        self,
+        context: DecisionContext,
+    ) -> Decision:
+        """Analyze request using full decision context."""
+
+        return self.decide(
+            context.user_message,
+            learning=context.learning,
+        )
+
+    def _build_calculation(
+        self,
+        capability,
+        analysis: IntentAnalysis,
+        learning: dict[str, object] | None,
+    ) -> Decision:
+        """Create calculation decision."""
+
+        expression = str(
+            analysis.entities.get(
+                "expression",
+                "",
+            )
+        )
+
+        metadata: dict[str, object] = {
+            "expression": expression,
+            "capability": capability.name,
+            "requires_permission": capability.requires_permission,
+            "capability_risk_level": capability.risk_level,
+            "intent_confidence": analysis.confidence,
+            "intent_entities": analysis.entities,
+        }
+
+        if learning:
+            metadata["learning"] = learning
+
+        strategy, risk_level, confidence = self._adaptive_strategy(
+            learning,
+        )
+
+        return Decision(
+            intent=capability.name,
+            confidence=confidence,
+            requires_tool=capability.requires_tool,
+            requires_permission=capability.requires_permission,
+            target=capability.default_tool,
+            priority="normal",
+            risk_level=risk_level,
+            strategy=strategy,
+            explanation=(
+                "Matematiksel işlem olduğu için " "hesaplama aracı kullanılmalı."
+            ),
+            plan=self._plan_builder.build_calculation(
+                expression=expression,
+            ),
+            metadata=metadata,
+        )
+
+    def _build_conversation(
+        self,
+        capability,
+        learning: dict[str, object] | None,
+    ) -> Decision:
+        """Create conversation decision."""
+
+        metadata: dict[str, object] = {
+            "capability": capability.name,
+            "requires_permission": capability.requires_permission,
+            "capability_risk_level": capability.risk_level,
+        }
 
         if learning:
             metadata["learning"] = learning
 
         return Decision(
-            intent="conversation",
+            intent=capability.name,
             confidence=0.7,
-            requires_tool=False,
+            requires_tool=capability.requires_tool,
+            requires_permission=capability.requires_permission,
+            target=capability.default_tool,
             priority="normal",
-            risk_level="low",
+            risk_level=capability.risk_level,
             strategy="direct_answer",
-            explanation="KullanÄ±cÄ± normal sohbet yanÄ±tÄ± istiyor.",
-            plan=[
-                PlanStep(
-                    description="Generate conversational response",
-                    action="respond",
-                ),
-            ],
+            explanation="Kullanıcı normal sohbet yanıtı istiyor.",
+            plan=self._plan_builder.build_conversation(),
             metadata=metadata,
         )
 
@@ -114,52 +161,46 @@ class Planner:
                 meta,
                 dict,
             ):
-                recommended_strategy = meta.get(
+                strategy = meta.get(
                     "recommended_strategy",
                 )
 
-                meta_risk = meta.get(
+                risk = meta.get(
                     "risk_level",
                 )
 
-                confidence_adjustment = meta.get(
-                    "confidence_adjustment",
-                    0.0,
+                adjustment = float(
+                    meta.get(
+                        "confidence_adjustment",
+                        0.0,
+                    )
                 )
 
-                if isinstance(
-                    recommended_strategy,
-                    str,
-                ):
-                    base_confidence = 0.8 + float(
-                        confidence_adjustment,
+                if strategy == "safe_tool_execution":
+                    return (
+                        strategy,
+                        risk or "medium",
+                        round(
+                            min(
+                                0.95,
+                                0.8 + adjustment,
+                            ),
+                            2,
+                        ),
                     )
 
-                    if recommended_strategy == "safe_tool_execution":
-                        return (
-                            "safe_tool_execution",
-                            meta_risk or "medium",
-                            round(
-                                min(
-                                    0.95,
-                                    base_confidence,
-                                ),
-                                2,
+                if strategy == "tool_execution":
+                    return (
+                        strategy,
+                        risk or "low",
+                        round(
+                            min(
+                                0.95,
+                                0.8 + adjustment,
                             ),
-                        )
-
-                    if recommended_strategy == "tool_execution":
-                        return (
-                            "tool_execution",
-                            meta_risk or "low",
-                            round(
-                                min(
-                                    0.95,
-                                    base_confidence,
-                                ),
-                                2,
-                            ),
-                        )
+                            2,
+                        ),
+                    )
 
             quality = learning.get(
                 "learning_quality",
@@ -179,54 +220,47 @@ class Planner:
                     0.75,
                 )
 
-            preferred_strategy = learning.get(
+            preferred = learning.get(
                 "preferred_strategy",
             )
 
-            confidence = learning.get(
-                "strategy_confidence",
-                0.0,
+            confidence = float(
+                learning.get(
+                    "strategy_confidence",
+                    0.0,
+                )
             )
 
-            if (
-                isinstance(
-                    preferred_strategy,
-                    str,
+            if preferred == "safe_tool_execution":
+                return (
+                    preferred,
+                    "medium",
+                    round(
+                        min(
+                            0.95,
+                            0.7 + confidence * 0.25,
+                        ),
+                        2,
+                    ),
                 )
-                and confidence
-            ):
-                if preferred_strategy == "safe_tool_execution":
-                    return (
-                        "safe_tool_execution",
-                        "medium",
-                        round(
-                            min(
-                                0.95,
-                                0.7 + float(confidence) * 0.25,
-                            ),
-                            2,
-                        ),
-                    )
 
-                if preferred_strategy == "tool_execution":
-                    return (
-                        "tool_execution",
-                        "low",
-                        round(
-                            min(
-                                0.95,
-                                0.7 + float(confidence) * 0.25,
-                            ),
-                            2,
+            if preferred == "tool_execution":
+                return (
+                    preferred,
+                    "low",
+                    round(
+                        min(
+                            0.95,
+                            0.7 + confidence * 0.25,
                         ),
-                    )
+                        2,
+                    ),
+                )
 
-            successful_strategies = learning.get(
+            for strategy in learning.get(
                 "successful_strategies",
                 [],
-            )
-
-            for strategy in successful_strategies:
+            ):
                 if "safe_tool_execution" in strategy:
                     return (
                         "safe_tool_execution",
@@ -254,51 +288,4 @@ class Planner:
             "tool_execution",
             "low",
             0.9,
-        )
-
-    def _is_calculation_request(
-        self,
-        message: str,
-    ) -> bool:
-        """Detect calculation intent."""
-
-        return any(
-            keyword in message
-            for keyword in [
-                "hesapla",
-                "kaÃ§",
-                "topla",
-                "Ã§Ä±kar",
-                "Ã§arp",
-                "bÃ¶l",
-            ]
-        )
-
-    def _select_tool(
-        self,
-        intent: str,
-    ) -> str | None:
-        """Select available tool for intent."""
-
-        if intent == "calculation":
-            if self._tools is None:
-                return "calculator"
-
-            if self._tools.has(
-                "calculator",
-            ):
-                return "calculator"
-
-        return None
-
-    def _extract_expression(
-        self,
-        user_message: str,
-    ) -> str:
-        """Extract mathematical expression."""
-
-        return re.sub(
-            r"[^\d+\-*/().]",
-            "",
-            user_message,
         )

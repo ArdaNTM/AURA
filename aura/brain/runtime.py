@@ -12,6 +12,8 @@ from aura.brain.learning_profile import LearningProfile
 from aura.brain.learning_profile_store import LearningProfileStore
 from aura.brain.memory_policy import MemoryPolicy
 from aura.brain.performance_engine import PerformanceEngine
+from aura.brain.permission_gate import PermissionGate
+from aura.brain.permission_request import PermissionRequest
 from aura.brain.reflection_engine import ReflectionEngine
 from aura.brain.state import AgentState
 from aura.memory.base import Memory
@@ -31,6 +33,7 @@ class AgentRuntime:
         performance_engine: PerformanceEngine | None = None,
         learning_profile: LearningProfile | None = None,
         learning_profile_store: LearningProfileStore | None = None,
+        permission_gate: PermissionGate | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
@@ -40,6 +43,7 @@ class AgentRuntime:
         self._reflection_engine = reflection_engine or ReflectionEngine()
         self._performance_engine = performance_engine or PerformanceEngine()
         self._learning_profile_store = learning_profile_store or LearningProfileStore()
+        self._permission_gate = permission_gate or PermissionGate()
 
         if learning_profile is None:
             self._learning_profile = self._learning_profile_store.load()
@@ -151,40 +155,31 @@ class AgentRuntime:
         state.decision = decision
         state.action = action
 
-        if decision:
-            execution_plan = ExecutionPlan(
-                goal=goal.description,
-                steps=decision.plan,
+        if decision and not self._permission_gate.can_execute(
+            decision,
+        ):
+            capability = decision.metadata.get(
+                "capability",
+                "unknown",
             )
 
-            state.set_execution_plan(
-                execution_plan,
-            )
-
-            state.metadata["intent"] = decision.intent
-            state.metadata["confidence"] = decision.confidence
-
-            state.metadata["execution_plan"] = {
-                "total_steps": len(
-                    execution_plan.steps,
+            state.set_permission_request(
+                PermissionRequest(
+                    capability=str(capability),
+                    reason=decision.explanation or "Permission required",
+                    risk_level=decision.risk_level,
                 ),
-                "completed_steps": execution_plan.completed_steps,
-                "is_complete": execution_plan.is_complete(),
-            }
-
-            self._apply_improvement_plan(
-                state,
-                decision,
             )
 
-        if decision:
-            state.metadata["intent"] = decision.intent
-            state.metadata["confidence"] = decision.confidence
+            state.metadata["permission_required"] = True
 
-            self._apply_improvement_plan(
-                state,
-                decision,
-            )
+            state.completed = True
+
+            return state
+
+        if state.execution_plan:
+            while not state.execution_plan.completed:
+                state.execution_plan.advance()
 
         observations = self._executor.execute_with_observation(
             decision,
@@ -235,8 +230,34 @@ class AgentRuntime:
         )
 
         state.metadata["goal"] = {
-            "description": goal.description,
+            "description": state.goal.description,
         }
+
+        if decision:
+            execution_plan = ExecutionPlan(
+                goal=goal.description,
+                steps=decision.plan,
+            )
+
+            state.set_execution_plan(
+                execution_plan,
+            )
+
+            state.metadata["intent"] = decision.intent
+            state.metadata["confidence"] = decision.confidence
+
+            state.metadata["execution_plan"] = {
+                "total_steps": len(
+                    execution_plan.steps,
+                ),
+                "completed_steps": execution_plan.completed_steps,
+                "is_complete": execution_plan.is_complete(),
+            }
+
+            self._apply_improvement_plan(
+                state,
+                decision,
+            )
 
         state.metadata["performance"] = {
             "success_rate": report.success_rate,

@@ -10,6 +10,7 @@ from aura.brain.goal import Goal
 from aura.brain.improvement import ImprovementPlan
 from aura.brain.models import Decision
 from aura.brain.observation import Observation
+from aura.brain.permission_request import PermissionRequest
 from aura.brain.reflection import Reflection
 
 
@@ -30,6 +31,8 @@ class AgentState:
     )
 
     reflection: Reflection | None = None
+
+    permission_request: PermissionRequest | None = None
 
     improvement_plan: ImprovementPlan | None = None
 
@@ -56,6 +59,14 @@ class AgentState:
         """Store reflection result."""
 
         self.reflection = reflection
+
+    def set_permission_request(
+        self,
+        request: PermissionRequest,
+    ) -> None:
+        """Store permission request."""
+
+        self.permission_request = request
 
     def set_improvement_plan(
         self,
