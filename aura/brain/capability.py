@@ -67,6 +67,7 @@ class CapabilityRegistry:
                 name="filesystem",
                 description="Read and write files",
                 requires_tool=True,
+                default_tool="filesystem",
                 requires_permission=True,
                 allowed_tools=("filesystem",),
                 risk_level="medium",

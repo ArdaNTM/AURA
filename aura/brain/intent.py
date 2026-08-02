@@ -72,6 +72,16 @@ class IntentEngine:
                 "file",
                 "klasör",
                 "folder",
+                "oluştur",
+                "create",
+                "yaz",
+                "write",
+                "sil",
+                "delete",
+                "oku",
+                "read",
+                ".txt",
+                ".py",
             ]
         ):
             return IntentAnalysis(

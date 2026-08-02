@@ -30,4 +30,5 @@ def test_application_registers_default_tools() -> None:
 
     assert app.tools.list_tools() == [
         "calculator",
+        "filesystem",
     ]
