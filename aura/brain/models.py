@@ -17,6 +17,8 @@ class IntentAnalysis:
         default_factory=dict,
     )
 
+    source_confidence: float | None = None
+
 
 @dataclass
 class PlanStep:
@@ -54,6 +56,14 @@ class Decision:
     strategy: str | None = None
 
     explanation: str | None = None
+
+    confidence_reason: str | None = None
+
+    routing_reason: str | None = None
+
+    outcome: dict[str, object] = field(
+        default_factory=dict,
+    )
 
     plan: list[PlanStep] = field(
         default_factory=list,

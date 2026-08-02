@@ -9,6 +9,8 @@ from aura.brain.brain import Brain
 from aura.brain.evaluator import Evaluator
 from aura.brain.executor import PlanExecutor
 from aura.brain.learning import LearningContext
+from aura.brain.learning_profile import LearningProfile
+from aura.brain.learning_profile_store import LearningProfileStore
 from aura.brain.memory_policy import MemoryPolicy
 from aura.brain.reflection_engine import ReflectionEngine
 from aura.brain.runtime import AgentRuntime
@@ -89,6 +91,7 @@ class AuraApplication:
                 tools=c.resolve(ToolRegistry),
                 memory=c.resolve(Memory),
                 learning_context=c.resolve(LearningContext),
+                learning_profile=c.resolve(LearningProfile),
             ),
         )
 
@@ -112,6 +115,18 @@ class AuraApplication:
         )
 
         self.container.register_factory(
+            LearningProfileStore,
+            lambda _: LearningProfileStore(),
+        )
+
+        self.container.register_factory(
+            LearningProfile,
+            lambda c: c.resolve(
+                LearningProfileStore,
+            ).load(),
+        )
+
+        self.container.register_factory(
             Evaluator,
             lambda _: Evaluator(),
         )
@@ -130,6 +145,12 @@ class AuraApplication:
                 c.resolve(MemoryPolicy),
                 c.resolve(Evaluator),
                 c.resolve(ReflectionEngine),
+                learning_profile=c.resolve(
+                    LearningProfile,
+                ),
+                learning_profile_store=c.resolve(
+                    LearningProfileStore,
+                ),
             ),
         )
 

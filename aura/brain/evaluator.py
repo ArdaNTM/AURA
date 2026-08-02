@@ -31,3 +31,29 @@ class Evaluator:
         observation.feedback = "Observation completed successfully."
 
         return observation
+
+    def evaluate_quality(
+        self,
+        observation: Observation,
+    ) -> dict[str, object]:
+        """Evaluate observation quality metrics."""
+
+        quality = {
+            "success": observation.success,
+            "score": observation.score,
+            "retry_needed": observation.retry_needed,
+            "output_length": len(
+                observation.output,
+            ),
+        }
+
+        if observation.score >= 0.9:
+            quality["quality_level"] = "high"
+
+        elif observation.score >= 0.5:
+            quality["quality_level"] = "medium"
+
+        else:
+            quality["quality_level"] = "low"
+
+        return quality

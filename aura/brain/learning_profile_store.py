@@ -32,6 +32,10 @@ class LearningProfileStore:
             "strategy_usage": profile.strategy_usage,
             "strategy_success": profile.strategy_success,
             "skill_scores": profile.skill_scores,
+            "self_evaluation": profile.self_evaluation,
+            "confidence_predictions": profile.confidence_predictions,
+            "confidence_correct": profile.confidence_correct,
+            "confidence_error_total": profile.confidence_error_total,
         }
 
         self._path.write_text(
@@ -80,5 +84,21 @@ class LearningProfileStore:
             skill_scores=data.get(
                 "skill_scores",
                 {},
+            ),
+            self_evaluation=data.get(
+                "self_evaluation",
+                {},
+            ),
+            confidence_predictions=data.get(
+                "confidence_predictions",
+                0,
+            ),
+            confidence_correct=data.get(
+                "confidence_correct",
+                0,
+            ),
+            confidence_error_total=data.get(
+                "confidence_error_total",
+                0.0,
             ),
         )

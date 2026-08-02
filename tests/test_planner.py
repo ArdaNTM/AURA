@@ -1,18 +1,8 @@
 from aura.brain.planner import Planner
-from aura.core.tools import ToolRegistry
-from aura.tools import CalculatorTool
 
 
 def test_planner_detects_calculation():
-    registry = ToolRegistry()
-
-    registry.register(
-        CalculatorTool(),
-    )
-
-    planner = Planner(
-        tools=registry,
-    )
+    planner = Planner()
 
     decision = planner.decide(
         "5 + 5 hesapla",
@@ -22,7 +12,7 @@ def test_planner_detects_calculation():
 
     assert decision.requires_tool
 
-    assert decision.confidence == 0.9
+    assert decision.confidence == 0.95
 
     assert decision.priority == "normal"
 

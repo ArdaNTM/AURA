@@ -21,6 +21,10 @@ class Reflection:
 
     retry_strategy: str | None = None
 
+    quality_score: float = 0.0
+
+    quality_level: str = "unknown"
+
     improvements: list[str] = field(
         default_factory=list,
     )

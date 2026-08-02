@@ -5,8 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from aura.brain.capability import CapabilityRegistry
+from aura.brain.confidence_fusion import ConfidenceFusion
 from aura.brain.decision_context import DecisionContext
 from aura.brain.intent import IntentEngine
+from aura.brain.learning_profile import LearningProfile
 from aura.brain.llm_reasoner import LLMReasoner
 from aura.brain.llm_recovery import LLMRecovery
 from aura.brain.llm_validator import LLMValidator
@@ -31,6 +33,10 @@ class Planner:
         llm_reasoner: LLMReasoner | None = None,
         llm_recovery: LLMRecovery | None = None,
         llm_validator: LLMValidator | None = None,
+        confidence_fusion: ConfidenceFusion | None = None,
+        llm_confidence_threshold: float | None = None,
+        confidence_guard_threshold: float = 0.5,
+        learning_profile: LearningProfile | None = None,
     ) -> None:
         self._tools = tools
         self._plan_builder = plan_builder or PlanBuilder()
@@ -46,6 +52,10 @@ class Planner:
             self._intent_engine,
         )
         self._llm_validator = llm_validator
+        self._confidence_fusion = confidence_fusion or ConfidenceFusion()
+        self._llm_confidence_threshold = llm_confidence_threshold
+        self._confidence_guard_threshold = confidence_guard_threshold
+        self._learning_profile = learning_profile
 
     @property
     def capabilities(
@@ -109,11 +119,31 @@ class Planner:
 
         analysis = self._intent_analysis(
             user_message,
+            learning,
         )
 
         capability = self._capabilities.get(
             analysis.intent,
         )
+
+        if (
+            analysis.source_confidence is not None
+            and analysis.source_confidence < self._confidence_guard_threshold
+            and capability.risk_level == "high"
+        ):
+            return self._build_risk_review_decision(
+                capability,
+                learning,
+            )
+
+        if (
+            analysis.source_confidence is not None
+            and analysis.source_confidence < self._confidence_guard_threshold
+        ):
+            return self._build_low_confidence_decision(
+                capability,
+                learning,
+            )
 
         if capability.requires_permission:
             return self._build_permission_capability(
@@ -291,6 +321,11 @@ class Planner:
             "intent_entities": analysis.entities,
         }
 
+        if analysis.source_confidence is not None:
+            metadata["llm_confidence"] = analysis.source_confidence
+
+        metadata["final_confidence"] = analysis.confidence
+
         self._add_tool_metadata(
             metadata,
             capability,
@@ -301,7 +336,11 @@ class Planner:
 
         strategy, risk_level, confidence = self._adaptive_strategy(
             learning,
+            capability.name,
         )
+
+        if learning is None and not self._learning_profile:
+            confidence = analysis.confidence
 
         return Decision(
             intent=capability.name,
@@ -359,11 +398,127 @@ class Planner:
             metadata=metadata,
         )
 
+    def _get_learning_confidence(
+        self,
+        learning: dict[str, object] | None,
+    ) -> float | None:
+        """Extract learning confidence signal."""
+
+        if not learning:
+            return None
+
+        confidence = learning.get(
+            "strategy_confidence",
+        )
+
+        if isinstance(
+            confidence,
+            (int, float),
+        ):
+            return float(
+                confidence,
+            )
+
+        return None
+
+    def _get_confidence_threshold(
+        self,
+    ) -> float:
+        """Return adaptive confidence threshold."""
+
+        if self._learning_profile:
+            return self._learning_profile.calibrated_confidence_threshold()
+
+        if self._llm_confidence_threshold is not None:
+            return self._llm_confidence_threshold
+
+        return 0.75
+
     def _adaptive_strategy(
         self,
         learning: dict[str, object] | None,
+        skill_name: str,
     ) -> tuple[str, str, float]:
         """Select strategy based on learning confidence."""
+
+        profile = None
+
+        if learning:
+            profile = learning.get(
+                "profile",
+            )
+
+        if self._learning_profile:
+            skill_score = self._learning_profile.skill_scores.get(
+                skill_name,
+            )
+
+            if skill_score is not None:
+
+                if skill_score < 0.5:
+                    return (
+                        "safe_tool_execution",
+                        "medium",
+                        0.75,
+                    )
+
+                if skill_score > 0.9:
+                    return (
+                        "tool_execution",
+                        "low",
+                        0.95,
+                    )
+
+            best_strategy = self._learning_profile.best_strategy()
+
+            if best_strategy == "safe_tool_execution":
+                return (
+                    "safe_tool_execution",
+                    "medium",
+                    0.85,
+                )
+
+            if best_strategy == "tool_execution":
+                return (
+                    "tool_execution",
+                    "low",
+                    0.85,
+                )
+
+        if isinstance(profile, dict):
+
+            confidence_error = profile.get(
+                "confidence_error",
+                0.0,
+            )
+
+            if confidence_error > 0.35:
+                return (
+                    "safe_tool_execution",
+                    "medium",
+                    0.75,
+                )
+
+        if learning:
+
+            self_evaluation = learning.get(
+                "self_evaluation",
+            )
+
+            if isinstance(
+                self_evaluation,
+                dict,
+            ):
+                weakest_skill = self_evaluation.get(
+                    "weakest_skill",
+                )
+
+                if weakest_skill == skill_name:
+                    return (
+                        "safe_tool_execution",
+                        "medium",
+                        0.75,
+                    )
 
         if learning:
             meta = learning.get(
@@ -533,6 +688,7 @@ class Planner:
     def _intent_analysis(
         self,
         user_message: str,
+        learning: dict[str, object] | None = None,
     ) -> IntentAnalysis:
         """Resolve intent using LLM with fallback."""
 
@@ -554,12 +710,96 @@ class Planner:
                         user_message,
                     )
 
+            if reasoning.confidence < self._get_confidence_threshold():
+                fallback = self._intent_engine.classify(
+                    user_message,
+                )
+
+                fallback.source_confidence = reasoning.confidence
+
+                return fallback
+
+            intent_analysis = self._intent_engine.classify(
+                user_message,
+            )
+
+            final_confidence = self._confidence_fusion.combine(
+                llm_confidence=reasoning.confidence,
+                intent_confidence=intent_analysis.confidence,
+                learning_confidence=self._get_learning_confidence(
+                    learning,
+                ),
+            )
+
             return IntentAnalysis(
                 intent=reasoning.intent,
-                confidence=reasoning.confidence,
+                confidence=final_confidence,
                 entities=reasoning.entities,
+                source_confidence=reasoning.confidence,
             )
 
         return self._intent_engine.classify(
             user_message,
+        )
+
+    def _build_low_confidence_decision(
+        self,
+        capability,
+        learning,
+    ) -> Decision:
+        """Create safe decision for uncertain intent."""
+
+        metadata = {
+            "capability": capability.name,
+            "confidence_guard": True,
+        }
+
+        if learning:
+            metadata["learning"] = learning
+
+        return Decision(
+            intent=capability.name,
+            confidence=0.0,
+            requires_tool=False,
+            target=None,
+            priority="normal",
+            risk_level="medium",
+            strategy="confidence_review",
+            explanation=("Confidence level is too low for execution."),
+            confidence_reason=("LLM confidence below execution threshold."),
+            routing_reason=("Execution blocked and sent to review."),
+            metadata=metadata,
+        )
+
+    def _build_risk_review_decision(
+        self,
+        capability,
+        learning,
+    ) -> Decision:
+        """Create review decision for risky uncertain actions."""
+
+        metadata = {
+            "capability": capability.name,
+            "risk_review": True,
+            "confidence_guard": True,
+        }
+
+        if learning:
+            metadata["learning"] = learning
+
+        return Decision(
+            intent=capability.name,
+            confidence=0.0,
+            requires_tool=False,
+            requires_permission=True,
+            target=None,
+            priority="high",
+            risk_level="high",
+            strategy="risk_review",
+            explanation=(
+                "High risk capability requires review " "because confidence is low."
+            ),
+            confidence_reason=("Low confidence detected."),
+            routing_reason=("High risk capability requires approval."),
+            metadata=metadata,
         )

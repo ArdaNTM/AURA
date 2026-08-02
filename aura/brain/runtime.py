@@ -17,6 +17,7 @@ from aura.brain.performance_engine import PerformanceEngine
 from aura.brain.permission_gate import PermissionGate
 from aura.brain.permission_request import PermissionRequest
 from aura.brain.reflection_engine import ReflectionEngine
+from aura.brain.self_evaluation_engine import SelfEvaluationEngine
 from aura.brain.state import AgentState
 from aura.memory.base import Memory
 
@@ -33,6 +34,7 @@ class AgentRuntime:
         evaluator: Evaluator | None = None,
         reflection_engine: ReflectionEngine | None = None,
         performance_engine: PerformanceEngine | None = None,
+        self_evaluation_engine: SelfEvaluationEngine | None = None,
         learning_profile: LearningProfile | None = None,
         learning_profile_store: LearningProfileStore | None = None,
         permission_gate: PermissionGate | None = None,
@@ -46,6 +48,7 @@ class AgentRuntime:
         self._evaluator = evaluator or Evaluator()
         self._reflection_engine = reflection_engine or ReflectionEngine()
         self._performance_engine = performance_engine or PerformanceEngine()
+        self._self_evaluation_engine = self_evaluation_engine or SelfEvaluationEngine()
         self._learning_profile_store = learning_profile_store or LearningProfileStore()
         self._permission_gate = permission_gate or PermissionGate()
         self._decision_validator = decision_validator or DecisionValidator(
@@ -232,6 +235,14 @@ class AgentRuntime:
                 evaluated,
                 decision=state.decision,
             )
+            if decision:
+                decision.outcome = {
+                    "success": reflection.success,
+                    "strategy": decision.strategy,
+                    "confidence": decision.confidence,
+                    "intent": decision.intent,
+                    "output": evaluated.output,
+                }
 
             state.add_observation(
                 evaluated,
@@ -251,6 +262,16 @@ class AgentRuntime:
                     strategy=decision.strategy,
                 )
 
+                self._learning_profile.register_confidence(
+                    confidence=decision.confidence,
+                    success=reflection.success,
+                )
+
+                self._learning_profile.register_skill_result(
+                    decision.intent,
+                    evaluated.score,
+                )
+
                 self._learning_profile_store.save(
                     self._learning_profile,
                 )
@@ -263,6 +284,29 @@ class AgentRuntime:
 
         report = self._performance_engine.evaluate(
             evaluated_observations,
+        )
+        self_evaluation = self._self_evaluation_engine.evaluate(
+            self._learning_profile,
+            report,
+        )
+
+        state.metadata["self_evaluation"] = {
+            "overall_score": self_evaluation.overall_score,
+            "strongest_skill": self_evaluation.strongest_skill,
+            "weakest_skill": self_evaluation.weakest_skill,
+            "best_strategy": self_evaluation.best_strategy,
+            "recommendations": self_evaluation.recommendations,
+        }
+        self._learning_profile.self_evaluation = {
+            "overall_score": self_evaluation.overall_score,
+            "strongest_skill": self_evaluation.strongest_skill,
+            "weakest_skill": self_evaluation.weakest_skill,
+            "best_strategy": self_evaluation.best_strategy,
+            "recommendations": self_evaluation.recommendations,
+        }
+
+        self._learning_profile_store.save(
+            self._learning_profile,
         )
 
         state.metadata["goal"] = {
@@ -307,6 +351,12 @@ class AgentRuntime:
             "successful_tasks": self._learning_profile.successful_tasks,
             "failed_tasks": self._learning_profile.failed_tasks,
             "success_rate": self._learning_profile.success_rate,
+            "confidence_accuracy": self._learning_profile.confidence_accuracy,
+            "confidence_error": self._learning_profile.confidence_error,
+            "average_quality": self._learning_profile.average_quality,
+            "strategy_usage": self._learning_profile.strategy_usage,
+            "strategy_success": self._learning_profile.strategy_success,
+            "skill_scores": self._learning_profile.skill_scores,
         }
 
         state.metadata["observation_count"] = len(

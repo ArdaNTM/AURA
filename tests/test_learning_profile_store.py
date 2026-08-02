@@ -80,3 +80,33 @@ def test_learning_profile_store_returns_empty_profile(
     assert profile.successful_tasks == 0
 
     assert profile.failed_tasks == 0
+
+
+def test_learning_profile_persists_self_evaluation(tmp_path):
+    store = LearningProfileStore(
+        tmp_path / "learning.json",
+    )
+
+    profile = LearningProfile()
+
+    profile.self_evaluation = {
+        "overall_score": 0.9,
+        "strongest_skill": "calculation",
+        "weakest_skill": "coding",
+        "best_strategy": "tool_execution",
+        "recommendations": [
+            "Improve coding skill",
+        ],
+    }
+
+    store.save(
+        profile,
+    )
+
+    loaded = store.load()
+
+    assert loaded.self_evaluation["overall_score"] == 0.9
+
+    assert loaded.self_evaluation["strongest_skill"] == "calculation"
+
+    assert loaded.self_evaluation["weakest_skill"] == "coding"

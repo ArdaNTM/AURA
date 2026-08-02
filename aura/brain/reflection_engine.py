@@ -33,6 +33,8 @@ class ReflectionEngine:
             return Reflection(
                 success=False,
                 summary="Execution failed.",
+                quality_score=0.0,
+                quality_level="low",
                 intent=context.get(
                     "intent",
                 ),
@@ -55,6 +57,8 @@ class ReflectionEngine:
             return Reflection(
                 success=True,
                 summary="Execution completed with room for improvement.",
+                quality_score=0.5,
+                quality_level="medium",
                 intent=context.get(
                     "intent",
                 ),
@@ -74,6 +78,8 @@ class ReflectionEngine:
         return Reflection(
             success=True,
             summary="Execution completed successfully.",
+            quality_score=1.0,
+            quality_level="high",
             intent=context.get(
                 "intent",
             ),
