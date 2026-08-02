@@ -16,6 +16,7 @@ from aura.brain.memory_policy import MemoryPolicy
 from aura.brain.performance_engine import PerformanceEngine
 from aura.brain.permission_gate import PermissionGate
 from aura.brain.permission_request import PermissionRequest
+from aura.brain.permission_service import PermissionService
 from aura.brain.reflection_engine import ReflectionEngine
 from aura.brain.self_evaluation_engine import SelfEvaluationEngine
 from aura.brain.state import AgentState
@@ -34,6 +35,7 @@ class AgentRuntime:
         evaluator: Evaluator | None = None,
         reflection_engine: ReflectionEngine | None = None,
         performance_engine: PerformanceEngine | None = None,
+        permission_service: PermissionService | None = None,
         self_evaluation_engine: SelfEvaluationEngine | None = None,
         learning_profile: LearningProfile | None = None,
         learning_profile_store: LearningProfileStore | None = None,
@@ -48,6 +50,7 @@ class AgentRuntime:
         self._evaluator = evaluator or Evaluator()
         self._reflection_engine = reflection_engine or ReflectionEngine()
         self._performance_engine = performance_engine or PerformanceEngine()
+        self._permission_service = permission_service or PermissionService()
         self._self_evaluation_engine = self_evaluation_engine or SelfEvaluationEngine()
         self._learning_profile_store = learning_profile_store or LearningProfileStore()
         self._permission_gate = permission_gate or PermissionGate()
@@ -119,6 +122,14 @@ class AgentRuntime:
         return self._performance_engine
 
     @property
+    def permission_service(
+        self,
+    ) -> PermissionService:
+        """Return permission service."""
+
+        return self._permission_service
+
+    @property
     def learning_profile(
         self,
     ) -> LearningProfile:
@@ -179,12 +190,19 @@ class AgentRuntime:
                 "unknown",
             )
 
+            permission_request = PermissionRequest(
+                capability=str(capability),
+                reason=decision.explanation or "Permission required",
+                risk_level=decision.risk_level,
+            )
+
+            self._permission_service.create(
+                permission_request,
+                decision,
+            )
+
             state.set_permission_request(
-                PermissionRequest(
-                    capability=str(capability),
-                    reason=decision.explanation or "Permission required",
-                    risk_level=decision.risk_level,
-                ),
+                permission_request,
             )
 
             state.metadata["permission_required"] = True
@@ -362,6 +380,52 @@ class AgentRuntime:
         state.metadata["observation_count"] = len(
             observations,
         )
+
+        state.completed = True
+
+        return state
+
+    def resume(
+        self,
+    ) -> AgentState:
+        """Resume execution after permission approval."""
+
+        request = self._permission_service.pending
+        decision = self._permission_service.decision
+
+        if request is None:
+            raise RuntimeError(
+                "No pending permission request.",
+            )
+
+        if not request.approved:
+            raise PermissionError(
+                "Permission request is not approved.",
+            )
+
+        if decision is None:
+            raise RuntimeError(
+                "No stored decision.",
+            )
+
+        self._permission_service.clear()
+
+        state = AgentState(
+            goal=Goal(
+                description=f"Approved permission: {request.capability}",
+            ),
+        )
+
+        state.decision = decision
+
+        observations = self._executor.execute_with_observation(
+            decision,
+        )
+
+        for observation in observations:
+            state.add_observation(
+                observation,
+            )
 
         state.completed = True
 
