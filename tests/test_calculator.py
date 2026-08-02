@@ -22,15 +22,23 @@ def test_calculator_parentheses() -> None:
 def test_calculator_schema() -> None:
     tool = CalculatorTool()
 
-    assert tool.schema() == {
-        "name": "calculator",
-        "description": "Evaluate basic mathematical expressions.",
-        "parameters": {
-            "expression": {
-                "type": "string",
-                "description": "Mathematical expression to evaluate.",
-            }
-        },
+    schema = tool.schema()
+
+    assert schema["name"] == "calculator"
+
+    assert schema["description"] == ("Evaluate basic mathematical expressions.")
+
+    assert schema["capability"] == "calculation"
+
+    assert schema["risk_level"] == "low"
+
+    assert schema["requires_permission"] is False
+
+    assert schema["parameters"] == {
+        "expression": {
+            "type": "string",
+            "description": "Mathematical expression to evaluate.",
+        }
     }
 
 

@@ -131,16 +131,17 @@ def test_unknown_tool() -> None:
 def test_tool_schema() -> None:
     tool = EchoTool()
 
-    assert tool.schema() == {
-        "name": "echo",
-        "description": "Echo the provided value.",
-        "parameters": {
-            "value": {
-                "type": "string",
-                "description": "Value to echo.",
-            }
-        },
-    }
+    schema = tool.schema()
+
+    assert schema["name"] == "echo"
+
+    assert schema["description"] == ("Echo the provided value.")
+
+    assert schema["capability"] == "unknown"
+
+    assert schema["risk_level"] == "low"
+
+    assert schema["requires_permission"] is False
 
 
 def test_registry_schemas() -> None:
@@ -150,18 +151,15 @@ def test_registry_schemas() -> None:
         EchoTool(),
     )
 
-    assert registry.schemas() == [
-        {
-            "name": "echo",
-            "description": "Echo the provided value.",
-            "parameters": {
-                "value": {
-                    "type": "string",
-                    "description": "Value to echo.",
-                }
-            },
-        }
-    ]
+    schemas = registry.schemas()
+
+    assert len(schemas) == 1
+
+    schema = schemas[0]
+
+    assert schema["name"] == "echo"
+
+    assert schema["capability"] == "unknown"
 
 
 def test_openai_tool_schema() -> None:

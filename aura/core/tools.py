@@ -22,6 +22,21 @@ class Tool(ABC):
         return ""
 
     @property
+    def capability(self) -> str:
+        """Capability provided by this tool."""
+        return "unknown"
+
+    @property
+    def risk_level(self) -> str:
+        """Execution risk level."""
+        return "low"
+
+    @property
+    def requires_permission(self) -> bool:
+        """Whether execution requires permission."""
+        return False
+
+    @property
     def parameters(self) -> dict[str, Any]:
         """Tool parameter schema."""
         return {}
@@ -32,6 +47,9 @@ class Tool(ABC):
         return {
             "name": self.name,
             "description": self.description,
+            "capability": self.capability,
+            "risk_level": self.risk_level,
+            "requires_permission": self.requires_permission,
             "parameters": self.parameters,
         }
 

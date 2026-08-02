@@ -28,6 +28,12 @@ class CalculatorTool(Tool):
         return "calculator"
 
     @property
+    def capability(self) -> str:
+        """Return provided capability."""
+
+        return "calculation"
+
+    @property
     def description(self) -> str:
         """Return the tool description."""
 
