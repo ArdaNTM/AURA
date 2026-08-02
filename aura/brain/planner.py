@@ -8,6 +8,8 @@ from aura.brain.capability import CapabilityRegistry
 from aura.brain.decision_context import DecisionContext
 from aura.brain.intent import IntentEngine
 from aura.brain.llm_reasoner import LLMReasoner
+from aura.brain.llm_recovery import LLMRecovery
+from aura.brain.llm_validator import LLMValidator
 from aura.brain.models import Decision, IntentAnalysis
 from aura.brain.plan_builder import PlanBuilder
 from aura.brain.tool_discovery import ToolDiscovery
@@ -27,6 +29,8 @@ class Planner:
         capability_registry: CapabilityRegistry | None = None,
         tool_discovery: ToolDiscovery | None = None,
         llm_reasoner: LLMReasoner | None = None,
+        llm_recovery: LLMRecovery | None = None,
+        llm_validator: LLMValidator | None = None,
     ) -> None:
         self._tools = tools
         self._plan_builder = plan_builder or PlanBuilder()
@@ -38,6 +42,10 @@ class Planner:
             tools,
         )
         self._llm_reasoner = llm_reasoner
+        self._llm_recovery = llm_recovery or LLMRecovery(
+            self._intent_engine,
+        )
+        self._llm_validator = llm_validator
 
     @property
     def capabilities(
@@ -154,6 +162,7 @@ class Planner:
             "capability": capability.name,
             "requires_permission": True,
             "capability_risk_level": capability.risk_level,
+            "llm_permission_checked": True,
         }
         self._add_tool_metadata(
             metadata,
@@ -163,16 +172,37 @@ class Planner:
         if learning:
             metadata["learning"] = learning
 
+        reasoning_risk = capability.risk_level
+        reasoning_confidence = 0.8
+
+        if learning:
+            reasoning = learning.get(
+                "llm_reasoning",
+            )
+
+            if isinstance(
+                reasoning,
+                dict,
+            ):
+                reasoning_risk = reasoning.get(
+                    "risk_level",
+                    reasoning_risk,
+                )
+
+                reasoning_confidence = reasoning.get(
+                    "confidence",
+                    reasoning_confidence,
+                )
         return Decision(
             intent=capability.name,
-            confidence=0.8,
+            confidence=reasoning_confidence,
             requires_tool=True,
             requires_permission=True,
             target=self._resolve_tool(
                 capability,
             ),
             priority="normal",
-            risk_level=capability.risk_level,
+            risk_level=reasoning_risk,
             strategy="permission_required",
             explanation=(f"{capability.name} capability requires permission."),
             plan=self._plan_builder.build_tool_execution(
@@ -504,13 +534,25 @@ class Planner:
         self,
         user_message: str,
     ) -> IntentAnalysis:
-        """Resolve intent using LLM when available."""
+        """Resolve intent using LLM with fallback."""
 
         if self._llm_reasoner:
 
             reasoning = self._llm_reasoner.analyze(
                 user_message,
             )
+
+            if self._llm_validator:
+
+                validation = self._llm_validator.validate(
+                    reasoning,
+                )
+
+                if not validation.valid:
+                    return self._llm_recovery.recover(
+                        reasoning,
+                        user_message,
+                    )
 
             return IntentAnalysis(
                 intent=reasoning.intent,
