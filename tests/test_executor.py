@@ -1,8 +1,22 @@
 from aura.ai.tool_runner import ToolRunner
 from aura.brain.executor import PlanExecutor
 from aura.brain.models import Decision, PlanStep
-from aura.core.tools import ToolRegistry
+from aura.core.tools import Tool, ToolRegistry
 from aura.tools import CalculatorTool
+
+
+class EchoTool(Tool):
+    """Simple test tool."""
+
+    @property
+    def name(self) -> str:
+        return "echo"
+
+    def execute(
+        self,
+        message: str,
+    ) -> str:
+        return message
 
 
 def create_executor() -> PlanExecutor:
@@ -10,6 +24,20 @@ def create_executor() -> PlanExecutor:
 
     registry.register(
         CalculatorTool(),
+    )
+
+    return PlanExecutor(
+        ToolRunner(
+            registry,
+        ),
+    )
+
+
+def create_dynamic_executor() -> PlanExecutor:
+    registry = ToolRegistry()
+
+    registry.register(
+        EchoTool(),
     )
 
     return PlanExecutor(
@@ -102,3 +130,31 @@ def test_executor_runs_dynamic_tool_action() -> None:
     assert results[0].name == "calculator"
 
     assert results[0].output == "5.0"
+
+
+def test_executor_runs_custom_tool_action() -> None:
+    executor = create_dynamic_executor()
+
+    decision = Decision(
+        intent="custom",
+        requires_tool=True,
+        plan=[
+            PlanStep(
+                description="Echo message",
+                action="echo",
+                metadata={
+                    "message": "hello",
+                },
+            )
+        ],
+    )
+
+    results = executor.execute(
+        decision,
+    )
+
+    assert len(results) == 1
+
+    assert results[0].name == "echo"
+
+    assert results[0].output == "hello"

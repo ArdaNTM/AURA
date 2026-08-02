@@ -39,3 +39,21 @@ class PlanBuilder:
                 },
             ),
         ]
+
+    def build_tool_execution(
+        self,
+        tool_name: str | None,
+        parameters: dict[str, object] | None = None,
+    ) -> list[PlanStep]:
+        """Build a generic tool execution plan."""
+
+        if tool_name is None:
+            return []
+
+        return [
+            PlanStep(
+                description=f"Execute tool: {tool_name}",
+                action=tool_name,
+                metadata=parameters or {},
+            ),
+        ]

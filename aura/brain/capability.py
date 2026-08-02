@@ -75,8 +75,9 @@ class CapabilityRegistry:
                 name="computer",
                 description="Control the computer",
                 requires_tool=True,
-                requires_permission=True,
+                default_tool="computer",
                 allowed_tools=("computer",),
+                requires_permission=True,
                 risk_level="high",
             ),
             "memory": Capability(

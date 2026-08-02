@@ -44,14 +44,18 @@ def test_empty_discovery_without_registry():
     assert discovery.available_schemas() == []
 
 
-def test_planner_rejects_unavailable_capability():
+def test_planner_creates_tool_execution_for_capability():
     planner = Planner()
 
     decision = planner.decide(
         "internette ara",
     )
 
-    assert decision.strategy == "unavailable_capability"
+    assert decision.strategy == "tool_execution"
+
+    assert decision.intent == "search"
+
+    assert decision.requires_tool
 
 
 def test_finds_tool_by_capability():

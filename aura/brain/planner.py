@@ -122,7 +122,7 @@ class Planner:
             )
 
         if capability.requires_tool:
-            return self._build_unavailable_capability(
+            return self._build_tool_capability(
                 capability,
                 learning,
             )
@@ -164,6 +164,54 @@ class Planner:
             risk_level=capability.risk_level,
             strategy="permission_required",
             explanation=(f"{capability.name} capability requires permission."),
+            plan=self._plan_builder.build_tool_execution(
+                tool_name=self._resolve_tool(
+                    capability,
+                ),
+                parameters={},
+            ),
+            metadata=metadata,
+        )
+
+    def _build_tool_capability(
+        self,
+        capability,
+        learning,
+    ) -> Decision:
+        """Create generic tool execution decision."""
+
+        metadata: dict[str, object] = {
+            "capability": capability.name,
+            "requires_permission": capability.requires_permission,
+            "capability_risk_level": capability.risk_level,
+        }
+
+        self._add_tool_metadata(
+            metadata,
+            capability,
+        )
+
+        if learning:
+            metadata["learning"] = learning
+
+        tool_name = self._resolve_tool(
+            capability,
+        )
+
+        return Decision(
+            intent=capability.name,
+            confidence=0.8,
+            requires_tool=True,
+            requires_permission=capability.requires_permission,
+            target=tool_name,
+            priority="normal",
+            risk_level=capability.risk_level,
+            strategy="tool_execution",
+            explanation=(f"{capability.name} capability requires tool execution."),
+            plan=self._plan_builder.build_tool_execution(
+                tool_name=tool_name,
+                parameters={},
+            ),
             metadata=metadata,
         )
 
