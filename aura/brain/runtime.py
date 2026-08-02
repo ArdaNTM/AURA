@@ -13,6 +13,7 @@ from aura.brain.improvement import ImprovementPlan
 from aura.brain.learning_profile import LearningProfile
 from aura.brain.learning_profile_store import LearningProfileStore
 from aura.brain.memory_policy import MemoryPolicy
+from aura.brain.models import Decision
 from aura.brain.performance_engine import PerformanceEngine
 from aura.brain.permission_gate import PermissionGate
 from aura.brain.permission_request import PermissionRequest
@@ -238,67 +239,10 @@ class AgentRuntime:
 
             return state
 
-        observations = self._executor.execute_with_observation(
+        evaluated_observations = self._execute_decision(
             decision,
+            state,
         )
-
-        evaluated_observations = []
-
-        for observation in observations:
-            evaluated = self._evaluator.evaluate(
-                observation,
-            )
-
-            reflection = self._reflection_engine.reflect(
-                evaluated,
-                decision=state.decision,
-            )
-            if decision:
-                decision.outcome = {
-                    "success": reflection.success,
-                    "strategy": decision.strategy,
-                    "confidence": decision.confidence,
-                    "intent": decision.intent,
-                    "output": evaluated.output,
-                }
-
-            state.add_observation(
-                evaluated,
-            )
-
-            state.set_reflection(
-                reflection,
-            )
-
-            evaluated_observations.append(
-                evaluated,
-            )
-
-            if decision:
-                self._learning_profile.register_task(
-                    success=reflection.success,
-                    strategy=decision.strategy,
-                )
-
-                self._learning_profile.register_confidence(
-                    confidence=decision.confidence,
-                    success=reflection.success,
-                )
-
-                self._learning_profile.register_skill_result(
-                    decision.intent,
-                    evaluated.score,
-                )
-
-                self._learning_profile_store.save(
-                    self._learning_profile,
-                )
-
-            self._store_observation(
-                evaluated,
-                reflection,
-                decision,
-            )
 
         report = self._performance_engine.evaluate(
             evaluated_observations,
@@ -378,7 +322,7 @@ class AgentRuntime:
         }
 
         state.metadata["observation_count"] = len(
-            observations,
+            evaluated_observations,
         )
 
         state.completed = True
@@ -429,21 +373,73 @@ class AgentRuntime:
 
     def _execute_decision(
         self,
-        decision,
+        decision: Decision,
         state: AgentState,
     ) -> list:
-        """Execute decision and attach observations."""
+        """Execute decision pipeline."""
 
         observations = self._executor.execute_with_observation(
             decision,
         )
 
+        evaluated_observations = []
+
         for observation in observations:
-            state.add_observation(
+            evaluated = self._evaluator.evaluate(
                 observation,
             )
 
-        return observations
+            reflection = self._reflection_engine.reflect(
+                evaluated,
+                decision=state.decision,
+            )
+
+            decision.outcome = {
+                "success": reflection.success,
+                "strategy": decision.strategy,
+                "confidence": decision.confidence,
+                "intent": decision.intent,
+                "output": evaluated.output,
+            }
+
+            state.add_observation(
+                evaluated,
+            )
+
+            state.set_reflection(
+                reflection,
+            )
+
+            evaluated_observations.append(
+                evaluated,
+            )
+
+            self._learning_profile.register_task(
+                success=reflection.success,
+                strategy=decision.strategy,
+            )
+
+            self._learning_profile.register_confidence(
+                confidence=decision.confidence,
+                success=reflection.success,
+            )
+
+            self._learning_profile.register_skill_result(
+                decision.intent,
+                evaluated.score,
+            )
+
+            self._learning_profile_store.save(
+                self._learning_profile,
+            )
+
+            self._store_observation(
+                evaluated,
+                reflection,
+                decision,
+            )
+
+        return evaluated_observations
 
     def _apply_improvement_plan(
         self,
