@@ -5,6 +5,7 @@ from __future__ import annotations
 from aura.brain.brain import Brain
 from aura.brain.decision_validator import DecisionValidator
 from aura.brain.evaluator import Evaluator
+from aura.brain.execution_guard import ExecutionGuard
 from aura.brain.execution_plan import ExecutionPlan
 from aura.brain.executor import PlanExecutor
 from aura.brain.goal import Goal
@@ -36,6 +37,7 @@ class AgentRuntime:
         learning_profile_store: LearningProfileStore | None = None,
         permission_gate: PermissionGate | None = None,
         decision_validator: DecisionValidator | None = None,
+        execution_guard: ExecutionGuard | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
@@ -46,9 +48,11 @@ class AgentRuntime:
         self._performance_engine = performance_engine or PerformanceEngine()
         self._learning_profile_store = learning_profile_store or LearningProfileStore()
         self._permission_gate = permission_gate or PermissionGate()
-
         self._decision_validator = decision_validator or DecisionValidator(
             brain.planner.capabilities,
+        )
+        self._execution_guard = execution_guard or ExecutionGuard(
+            brain.tools,
         )
         if learning_profile is None:
             self._learning_profile = self._learning_profile_store.load()
@@ -201,6 +205,15 @@ class AgentRuntime:
             }
 
             state.completed = True
+
+            return state
+
+        if not self._execution_guard.can_execute(
+            decision,
+        ):
+            state.completed = True
+
+            state.metadata["execution_blocked"] = True
 
             return state
 
