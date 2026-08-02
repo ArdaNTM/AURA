@@ -71,6 +71,7 @@ def test_runtime_stores_pending_decision():
 
     assert permission_service.decision.intent == "filesystem"
 
+
 def test_runtime_resume_executes_approved_permission():
 
     registry = ToolRegistry()
@@ -109,6 +110,7 @@ def test_runtime_resume_executes_approved_permission():
 
     assert resumed.decision.intent == "filesystem"
 
+
 def test_resume_executes_with_observations():
 
     registry = ToolRegistry()
@@ -131,7 +133,7 @@ def test_resume_executes_with_observations():
         permission_service=permission_service,
     )
 
-    state = runtime.run(
+    _ = runtime.run(
         "workspace içine test.txt oluştur",
     )
 
@@ -141,6 +143,9 @@ def test_resume_executes_with_observations():
 
     assert resumed.completed
 
-    assert len(
-        resumed.observations,
-    ) > 0    
+    assert (
+        len(
+            resumed.observations,
+        )
+        > 0
+    )

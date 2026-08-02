@@ -418,6 +418,22 @@ class AgentRuntime:
 
         state.decision = decision
 
+        self._execute_decision(
+            decision,
+            state,
+        )
+
+        state.completed = True
+
+        return state
+
+    def _execute_decision(
+        self,
+        decision,
+        state: AgentState,
+    ) -> list:
+        """Execute decision and attach observations."""
+
         observations = self._executor.execute_with_observation(
             decision,
         )
@@ -427,9 +443,7 @@ class AgentRuntime:
                 observation,
             )
 
-        state.completed = True
-
-        return state
+        return observations
 
     def _apply_improvement_plan(
         self,
