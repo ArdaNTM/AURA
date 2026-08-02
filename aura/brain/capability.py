@@ -72,6 +72,15 @@ class CapabilityRegistry:
                 allowed_tools=("filesystem",),
                 risk_level="medium",
             ),
+            "terminal": Capability(
+                name="terminal",
+                description="Execute terminal commands",
+                requires_tool=True,
+                default_tool="terminal",
+                allowed_tools=("terminal",),
+                requires_permission=True,
+                risk_level="high",
+            ),
             "computer": Capability(
                 name="computer",
                 description="Control the computer",
@@ -85,6 +94,15 @@ class CapabilityRegistry:
                 name="memory",
                 description="Store and retrieve memories",
                 requires_tool=True,
+                risk_level="medium",
+            ),
+            "screen": Capability(
+                name="screen",
+                description="Capture and inspect computer screen",
+                requires_tool=True,
+                default_tool="screen_capture",
+                allowed_tools=("screen_capture",),
+                requires_permission=True,
                 risk_level="medium",
             ),
         }

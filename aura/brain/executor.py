@@ -5,6 +5,7 @@ from __future__ import annotations
 from aura.ai.tool_runner import ToolRunner
 from aura.brain.models import Decision, PlanStep
 from aura.brain.observation import Observation
+from aura.brain.permission_runtime import PermissionRuntime
 from aura.core.tool_result import ToolResult
 
 
@@ -14,11 +15,15 @@ class PlanExecutor:
     def __init__(
         self,
         tool_runner: ToolRunner,
+        permission_runtime: PermissionRuntime | None = None,
     ) -> None:
         self._tool_runner = tool_runner
+        self._permission_runtime = permission_runtime or PermissionRuntime()
 
     @property
-    def tool_runner(self) -> ToolRunner:
+    def tool_runner(
+        self,
+    ) -> ToolRunner:
         """Return tool runner."""
 
         return self._tool_runner
@@ -29,6 +34,13 @@ class PlanExecutor:
     ) -> list[ToolResult]:
         """Execute decision plan."""
 
+        if decision.requires_permission:
+
+            if not self._permission_runtime.check(
+                decision,
+            ):
+                return []
+
         results: list[ToolResult] = []
 
         for step in decision.plan:
@@ -37,9 +49,7 @@ class PlanExecutor:
             )
 
             if result is not None:
-                results.append(
-                    result,
-                )
+                results.append(result)
 
             step.completed = True
 
@@ -68,12 +78,13 @@ class PlanExecutor:
                     source=result.name,
                     output=result.output,
                     success=result.success,
-                    metadata=(
+                    metadata=result.metadata
+                    | (
                         {
                             "error": result.error,
                         }
                         if result.error
-                        else None
+                        else {}
                     ),
                 )
             )

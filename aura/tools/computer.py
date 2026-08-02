@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from aura.computer.controller import ComputerController
 from aura.core.tools import Tool
 
 
@@ -57,4 +58,15 @@ class ComputerTool(Tool):
     ) -> str:
         """Execute computer action."""
 
-        return f"Computer action executed: {action}"
+        if action == "open_browser":
+            return f"Computer action executed: {action}"
+
+        return self._controller.execute_action(
+            action,
+        )
+
+    def __init__(
+        self,
+        controller: ComputerController | None = None,
+    ) -> None:
+        self._controller = controller or ComputerController()

@@ -68,6 +68,24 @@ class IntentEngine:
         if any(
             keyword in text
             for keyword in [
+                "terminal",
+                "komut",
+                "command",
+                "çalıştır",
+                "run",
+                "python çalıştır",
+                "npm",
+                "git",
+            ]
+        ):
+            return IntentAnalysis(
+                intent="terminal",
+                confidence=0.90,
+            )
+
+        if any(
+            keyword in text
+            for keyword in [
                 "dosya",
                 "file",
                 "klasör",
@@ -86,6 +104,22 @@ class IntentEngine:
         ):
             return IntentAnalysis(
                 intent="filesystem",
+                confidence=0.90,
+            )
+
+        if any(
+            keyword in text
+            for keyword in [
+                "ekran",
+                "screenshot",
+                "screen",
+                "görüntü",
+                "gör",
+                "analiz et",
+            ]
+        ):
+            return IntentAnalysis(
+                intent="screen",
                 confidence=0.90,
             )
 

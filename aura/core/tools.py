@@ -126,9 +126,31 @@ class ToolRegistry:
                 **kwargs,
             )
 
+            if isinstance(
+                output,
+                ToolResult,
+            ):
+                return output
+
             return ToolResult(
                 name=name,
                 output=str(output),
+            )
+
+        except KeyError as exc:
+            return ToolResult(
+                name=name,
+                output="",
+                success=False,
+                error=exc.args[0],
+            )
+
+        except Exception as exc:
+            return ToolResult(
+                name=name,
+                output="",
+                success=False,
+                error=str(exc),
             )
 
         except KeyError as exc:
