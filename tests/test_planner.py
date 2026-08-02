@@ -1,8 +1,18 @@
 from aura.brain.planner import Planner
+from aura.core.tools import ToolRegistry
+from aura.tools import CalculatorTool
 
 
 def test_planner_detects_calculation():
-    planner = Planner()
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
+
+    planner = Planner(
+        tools=registry,
+    )
 
     decision = planner.decide(
         "5 + 5 hesapla",
@@ -25,6 +35,10 @@ def test_planner_detects_calculation():
     assert len(decision.plan) == 2
 
     assert decision.metadata["expression"] == "5+5"
+
+    assert decision.metadata["selected_tool"] == "calculator"
+
+    assert decision.metadata["tool_discovered"]
 
 
 def test_planner_detects_conversation():
