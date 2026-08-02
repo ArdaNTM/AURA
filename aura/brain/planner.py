@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from aura.brain.capability import CapabilityRegistry
 from aura.brain.decision_context import DecisionContext
 from aura.brain.intent import IntentEngine
+from aura.brain.llm_reasoner import LLMReasoner
 from aura.brain.models import Decision, IntentAnalysis
 from aura.brain.plan_builder import PlanBuilder
 from aura.brain.tool_discovery import ToolDiscovery
@@ -25,6 +26,7 @@ class Planner:
         intent_engine: IntentEngine | None = None,
         capability_registry: CapabilityRegistry | None = None,
         tool_discovery: ToolDiscovery | None = None,
+        llm_reasoner: LLMReasoner | None = None,
     ) -> None:
         self._tools = tools
         self._plan_builder = plan_builder or PlanBuilder()
@@ -35,6 +37,7 @@ class Planner:
         self._tool_discovery = tool_discovery or ToolDiscovery(
             tools,
         )
+        self._llm_reasoner = llm_reasoner
 
     @property
     def capabilities(
@@ -51,6 +54,14 @@ class Planner:
         """Return tool discovery service."""
 
         return self._tool_discovery
+
+    @property
+    def llm_reasoner(
+        self,
+    ) -> LLMReasoner | None:
+        """Return LLM reasoner."""
+
+        return self._llm_reasoner
 
     def _resolve_tool(
         self,
@@ -88,7 +99,7 @@ class Planner:
     ) -> Decision:
         """Analyze request and create a decision."""
 
-        analysis = self._intent_engine.classify(
+        analysis = self._intent_analysis(
             user_message,
         )
 
@@ -487,4 +498,26 @@ class Planner:
             strategy="unavailable_capability",
             explanation=(f"Capability '{capability.name}' " "is not available."),
             metadata=metadata,
+        )
+
+    def _intent_analysis(
+        self,
+        user_message: str,
+    ) -> IntentAnalysis:
+        """Resolve intent using LLM when available."""
+
+        if self._llm_reasoner:
+
+            reasoning = self._llm_reasoner.analyze(
+                user_message,
+            )
+
+            return IntentAnalysis(
+                intent=reasoning.intent,
+                confidence=reasoning.confidence,
+                entities=reasoning.entities,
+            )
+
+        return self._intent_engine.classify(
+            user_message,
         )
