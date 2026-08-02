@@ -145,6 +145,13 @@ class Planner:
                 learning,
             )
 
+        if capability.name == "filesystem":
+            return self._build_filesystem(
+                capability,
+                user_message,
+                learning,
+            )
+
         if capability.requires_permission:
             return self._build_permission_capability(
                 capability,
@@ -167,6 +174,13 @@ class Planner:
             return self._build_calculation(
                 capability,
                 analysis,
+                learning,
+            )
+
+        if capability.name == "filesystem":
+            return self._build_filesystem(
+                capability,
+                user_message,
                 learning,
             )
 
@@ -198,6 +212,15 @@ class Planner:
             metadata,
             capability,
         )
+
+        parameters = {}
+
+        if capability.name == "filesystem":
+            parameters = {
+                "operation": "write",
+                "path": "untitled.txt",
+                "content": "",
+            }
 
         if learning:
             metadata["learning"] = learning
@@ -239,7 +262,7 @@ class Planner:
                 tool_name=self._resolve_tool(
                     capability,
                 ),
-                parameters={},
+                parameters=parameters,
             ),
             metadata=metadata,
         )
@@ -803,3 +826,49 @@ class Planner:
             routing_reason=("High risk capability requires approval."),
             metadata=metadata,
         )
+
+    def _build_filesystem(
+        self,
+        capability,
+        user_message,
+        learning,
+    ):
+        metadata = {
+            "operation": "write",
+            "path": self._extract_filename(user_message),
+            "content": "",
+        }
+
+        return Decision(
+            intent="filesystem",
+            confidence=0.8,
+            requires_tool=True,
+            requires_permission=True,
+            target="filesystem",
+            priority="normal",
+            risk_level="medium",
+            strategy="tool_execution",
+            explanation="Filesystem operation requires tool execution.",
+            plan=self._plan_builder.build_tool_execution(
+                tool_name="filesystem",
+                parameters=metadata,
+            ),
+            metadata={
+                "capability": "filesystem",
+                "requires_permission": True,
+            },
+        )
+
+    def _extract_filename(
+        self,
+        message: str,
+    ) -> str:
+        """Extract target filename from filesystem request."""
+
+        tokens = message.split()
+
+        for token in tokens:
+            if "." in token:
+                return token.strip("\"'.,")
+
+        return "untitled.txt"
