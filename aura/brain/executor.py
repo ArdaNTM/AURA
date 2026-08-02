@@ -89,15 +89,13 @@ class PlanExecutor:
         if step.action is None:
             return None
 
-        if step.action == "calculator":
-            expression = step.metadata.get(
-                "expression",
-                "",
-            )
+        if step.action in (
+            "analyze",
+            "respond",
+        ):
+            return None
 
-            return self._tool_runner.run(
-                "calculator",
-                expression,
-            )
-
-        return None
+        return self._tool_runner.run(
+            step.action,
+            **step.metadata,
+        )

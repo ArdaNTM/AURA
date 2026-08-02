@@ -74,3 +74,31 @@ def test_executor_marks_steps_completed() -> None:
     )
 
     assert step.completed
+
+
+def test_executor_runs_dynamic_tool_action() -> None:
+    executor = create_executor()
+
+    decision = Decision(
+        intent="calculation",
+        requires_tool=True,
+        plan=[
+            PlanStep(
+                description="Calculate expression",
+                action="calculator",
+                metadata={
+                    "expression": "10/2",
+                },
+            )
+        ],
+    )
+
+    results = executor.execute(
+        decision,
+    )
+
+    assert len(results) == 1
+
+    assert results[0].name == "calculator"
+
+    assert results[0].output == "5.0"

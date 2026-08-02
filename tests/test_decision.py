@@ -174,3 +174,27 @@ def test_decision_engine_requests_confirmation_for_medium_risk_low_confidence():
     assert action.name == "request_confirmation"
 
     assert action.metadata["risk_level"] == "medium"
+
+
+def test_decision_engine_preserves_selected_tool_metadata():
+    engine = DecisionEngine()
+
+    decision = Decision(
+        intent="calculation",
+        requires_tool=True,
+        target="calculator",
+        strategy="tool_execution",
+        confidence=0.9,
+        priority="normal",
+        risk_level="low",
+        metadata={
+            "selected_tool": "calculator",
+            "tool_discovered": True,
+        },
+    )
+
+    action = engine.decide(
+        decision,
+    )
+
+    assert action.tool_name == "calculator"
