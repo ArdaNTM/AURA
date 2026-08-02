@@ -9,6 +9,7 @@ from aura.brain.decision_context import DecisionContext
 from aura.brain.intent import IntentEngine
 from aura.brain.models import Decision, IntentAnalysis
 from aura.brain.plan_builder import PlanBuilder
+from aura.brain.tool_discovery import ToolDiscovery
 
 if TYPE_CHECKING:
     from aura.core.tools import ToolRegistry
@@ -23,12 +24,16 @@ class Planner:
         plan_builder: PlanBuilder | None = None,
         intent_engine: IntentEngine | None = None,
         capability_registry: CapabilityRegistry | None = None,
+        tool_discovery: ToolDiscovery | None = None,
     ) -> None:
         self._tools = tools
         self._plan_builder = plan_builder or PlanBuilder()
         self._intent_engine = intent_engine or IntentEngine()
         self._capabilities = capability_registry or CapabilityRegistry(
             tools=tools,
+        )
+        self._tool_discovery = tool_discovery or ToolDiscovery(
+            tools,
         )
 
     @property
@@ -38,6 +43,43 @@ class Planner:
         """Return capability registry."""
 
         return self._capabilities
+
+    @property
+    def tool_discovery(
+        self,
+    ) -> ToolDiscovery:
+        """Return tool discovery service."""
+
+        return self._tool_discovery
+
+    def _resolve_tool(
+        self,
+        capability,
+    ) -> str | None:
+        """Resolve executable tool for capability."""
+
+        discovered = self._tool_discovery.find_tool(
+            capability.name,
+        )
+
+        if discovered:
+            return discovered
+
+        return capability.default_tool
+
+    def _add_tool_metadata(
+        self,
+        metadata: dict[str, object],
+        capability,
+    ) -> None:
+        """Add selected tool information."""
+
+        tool = self._resolve_tool(
+            capability,
+        )
+
+        metadata["selected_tool"] = tool
+        metadata["tool_discovered"] = tool is not None
 
     def decide(
         self,
@@ -54,6 +96,24 @@ class Planner:
             analysis.intent,
         )
 
+        if capability.requires_permission:
+            return self._build_permission_capability(
+                capability,
+                learning,
+            )
+
+        elif (
+            capability.requires_tool
+            and self._tools is not None
+            and not self._tool_discovery.is_available(
+                capability.name,
+            )
+        ):
+            return self._build_unavailable_capability(
+                capability,
+                learning,
+            )
+
         if capability.name == "calculation":
             return self._build_calculation(
                 capability,
@@ -61,9 +121,50 @@ class Planner:
                 learning,
             )
 
+        if capability.requires_tool:
+            return self._build_unavailable_capability(
+                capability,
+                learning,
+            )
+
         return self._build_conversation(
             capability,
             learning,
+        )
+
+    def _build_permission_capability(
+        self,
+        capability,
+        learning,
+    ) -> Decision:
+        """Create permission-required decision."""
+
+        metadata = {
+            "capability": capability.name,
+            "requires_permission": True,
+            "capability_risk_level": capability.risk_level,
+        }
+        self._add_tool_metadata(
+            metadata,
+            capability,
+        )
+
+        if learning:
+            metadata["learning"] = learning
+
+        return Decision(
+            intent=capability.name,
+            confidence=0.8,
+            requires_tool=True,
+            requires_permission=True,
+            target=self._resolve_tool(
+                capability,
+            ),
+            priority="normal",
+            risk_level=capability.risk_level,
+            strategy="permission_required",
+            explanation=(f"{capability.name} capability requires permission."),
+            metadata=metadata,
         )
 
     def decide_with_context(
@@ -101,6 +202,11 @@ class Planner:
             "intent_entities": analysis.entities,
         }
 
+        self._add_tool_metadata(
+            metadata,
+            capability,
+        )
+
         if learning:
             metadata["learning"] = learning
 
@@ -113,7 +219,9 @@ class Planner:
             confidence=confidence,
             requires_tool=capability.requires_tool,
             requires_permission=capability.requires_permission,
-            target=capability.default_tool,
+            target=self._resolve_tool(
+                capability,
+            ),
             priority="normal",
             risk_level=risk_level,
             strategy=strategy,
@@ -138,6 +246,10 @@ class Planner:
             "requires_permission": capability.requires_permission,
             "capability_risk_level": capability.risk_level,
         }
+        self._add_tool_metadata(
+            metadata,
+            capability,
+        )
 
         if learning:
             metadata["learning"] = learning
@@ -147,7 +259,9 @@ class Planner:
             confidence=0.7,
             requires_tool=capability.requires_tool,
             requires_permission=capability.requires_permission,
-            target=capability.default_tool,
+            target=self._resolve_tool(
+                capability,
+            ),
             priority="normal",
             risk_level=capability.risk_level,
             strategy="direct_answer",
@@ -298,4 +412,31 @@ class Planner:
             "tool_execution",
             "low",
             0.9,
+        )
+
+    def _build_unavailable_capability(
+        self,
+        capability,
+        learning: dict[str, object] | None,
+    ) -> Decision:
+        """Create decision when capability is unavailable."""
+
+        metadata: dict[str, object] = {
+            "capability": capability.name,
+            "available": False,
+        }
+
+        if learning:
+            metadata["learning"] = learning
+
+        return Decision(
+            intent=capability.name,
+            confidence=0.0,
+            requires_tool=False,
+            target=None,
+            priority="normal",
+            risk_level=capability.risk_level,
+            strategy="unavailable_capability",
+            explanation=(f"Capability '{capability.name}' " "is not available."),
+            metadata=metadata,
         )
