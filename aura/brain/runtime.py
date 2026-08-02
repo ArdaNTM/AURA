@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from aura.brain.brain import Brain
+from aura.brain.decision_validator import DecisionValidator
 from aura.brain.evaluator import Evaluator
 from aura.brain.execution_plan import ExecutionPlan
 from aura.brain.executor import PlanExecutor
@@ -34,6 +35,7 @@ class AgentRuntime:
         learning_profile: LearningProfile | None = None,
         learning_profile_store: LearningProfileStore | None = None,
         permission_gate: PermissionGate | None = None,
+        decision_validator: DecisionValidator | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
@@ -45,6 +47,9 @@ class AgentRuntime:
         self._learning_profile_store = learning_profile_store or LearningProfileStore()
         self._permission_gate = permission_gate or PermissionGate()
 
+        self._decision_validator = decision_validator or DecisionValidator(
+            brain.planner.capabilities,
+        )
         if learning_profile is None:
             self._learning_profile = self._learning_profile_store.load()
         else:
@@ -184,6 +189,20 @@ class AgentRuntime:
         if state.execution_plan:
             while not state.execution_plan.completed:
                 state.execution_plan.advance()
+
+        validation = self._decision_validator.validate(
+            decision,
+        )
+
+        if not validation.valid:
+            state.metadata["decision_validation"] = {
+                "valid": False,
+                "reason": validation.reason,
+            }
+
+            state.completed = True
+
+            return state
 
         observations = self._executor.execute_with_observation(
             decision,

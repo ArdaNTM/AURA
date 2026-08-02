@@ -31,6 +31,14 @@ class Planner:
             tools=tools,
         )
 
+    @property
+    def capabilities(
+        self,
+    ) -> CapabilityRegistry:
+        """Return capability registry."""
+
+        return self._capabilities
+
     def decide(
         self,
         user_message: str,
