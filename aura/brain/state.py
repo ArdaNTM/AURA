@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from aura.brain.background_task import BackgroundTask
 from aura.brain.decision import Action
 from aura.brain.execution_plan import ExecutionPlan
 from aura.brain.goal import Goal
@@ -19,6 +20,8 @@ class AgentState:
     """Runtime state of an agent execution."""
 
     goal: Goal
+
+    background_task: BackgroundTask | None = None
 
     decision: Decision | None = None
 

@@ -132,6 +132,42 @@ class Brain:
 
             learning["retrieved_memories"] = ranked_memories
 
+            task_failures = [
+                content
+                for _, content in ranked_memories
+                if (
+                    "task_success=False" in content
+                    or "success=False" in content
+                )
+            ]
+
+            if task_failures:
+                learning["has_failures"] = True
+
+            learning["task_failures"] = task_failures            
+
+            task_failures = [
+                content
+                for _, content in ranked_memories
+                if (
+                    "task_success=False" in content
+                    or "success=False" in content
+                )
+            ]
+
+            learning["task_failures"] = task_failures
+
+            task_successes = [
+                content
+                for _, content in ranked_memories
+                if (
+                    "task_success=True" in content
+                    or "success=True" in content
+                )
+            ]
+
+            learning["task_successes"] = task_successes
+
             successful_strategies = [
                 content
                 for _, content in ranked_memories
@@ -143,6 +179,20 @@ class Brain:
             strategy_scores = self._strategy_scores(
                 successful_strategies,
             )
+
+            task_experiences = [
+                content
+                for _, content in ranked_memories
+                if (
+                    "task_success=True" in content
+                    and "strategy=" in content
+                )
+            ]
+
+            learning["task_experiences"] = task_experiences
+
+            if task_experiences:
+                learning["best_task_experience"] = task_experiences[0]
 
             learning["strategy_scores"] = strategy_scores
 

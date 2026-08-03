@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from aura.brain.capability import CapabilityRegistry
 from aura.brain.confidence_fusion import ConfidenceFusion
 from aura.brain.decision_context import DecisionContext
+from aura.brain.experience_planner import ExperiencePlanner
 from aura.brain.intent import IntentEngine
 from aura.brain.learning_profile import LearningProfile
 from aura.brain.llm_reasoner import LLMReasoner
@@ -37,6 +38,7 @@ class Planner:
         llm_confidence_threshold: float | None = None,
         confidence_guard_threshold: float = 0.5,
         learning_profile: LearningProfile | None = None,
+        experience_planner: ExperiencePlanner | None = None,
     ) -> None:
         self._tools = tools
         self._plan_builder = plan_builder or PlanBuilder()
@@ -56,6 +58,10 @@ class Planner:
         self._llm_confidence_threshold = llm_confidence_threshold
         self._confidence_guard_threshold = confidence_guard_threshold
         self._learning_profile = learning_profile
+        self._experience_planner = (
+            experience_planner
+            or ExperiencePlanner()
+        )        
 
     @property
     def capabilities(
@@ -309,9 +315,13 @@ class Planner:
             risk_level=capability.risk_level,
             strategy="tool_execution",
             explanation=(f"{capability.name} capability requires tool execution."),
-            plan=self._plan_builder.build_tool_execution(
-                tool_name=tool_name,
-                parameters={},
+            plan=self._apply_experience_plan(
+                self._plan_builder.build_tool_execution(
+                    tool_name=tool_name,
+                    parameters={},
+                ),
+                learning,
+                metadata,
             ),
             metadata=metadata,
         )
@@ -386,8 +396,12 @@ class Planner:
             explanation=(
                 "Matematiksel işlem olduğu için " "hesaplama aracı kullanılmalı."
             ),
-            plan=self._plan_builder.build_calculation(
-                expression=expression,
+            plan=self._apply_experience_plan(
+                self._plan_builder.build_calculation(
+                    expression=expression,
+                ),
+                learning,
+                metadata,
             ),
             metadata=metadata,
         )
@@ -424,7 +438,11 @@ class Planner:
             risk_level=capability.risk_level,
             strategy="direct_answer",
             explanation="Kullanıcı normal sohbet yanıtı istiyor.",
-            plan=self._plan_builder.build_conversation(),
+            plan=self._apply_experience_plan(
+                self._plan_builder.build_conversation(),
+                learning,
+                metadata,
+            ),
             metadata=metadata,
         )
 
@@ -931,3 +949,44 @@ class Planner:
                 return token.strip("\"'.,")
 
         return "untitled.txt"
+
+    def _apply_experience_plan(
+        self,
+        plan,
+        learning,
+        metadata: dict[str, object] | None = None,
+    ):
+        """Modify plan using previous experience."""
+
+        if not isinstance(
+            learning,
+            dict,
+        ):
+            return plan
+
+        experiences = learning.get(
+            "task_experiences",
+            [],
+        )
+
+        failures = learning.get(
+            "task_failures",
+            [],
+        )
+
+        if not experiences and not failures:
+            return plan
+
+        if metadata is not None:
+            metadata["experience"] = True
+
+            if experiences:
+                metadata["previous_experience"] = experiences[0]
+
+            if failures:
+                metadata["previous_failure"] = failures[0]
+
+        return self._experience_planner.modify_plan(
+            plan,
+            learning,
+        )

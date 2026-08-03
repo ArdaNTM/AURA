@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from aura.brain.background_task import BackgroundTask
 from aura.brain.brain import Brain
 from aura.brain.decision_validator import DecisionValidator
 from aura.brain.evaluator import Evaluator
@@ -21,6 +22,7 @@ from aura.brain.permission_service import PermissionService
 from aura.brain.reflection_engine import ReflectionEngine
 from aura.brain.self_evaluation_engine import SelfEvaluationEngine
 from aura.brain.state import AgentState
+from aura.brain.task_memory import TaskMemory
 from aura.memory.base import Memory
 
 
@@ -33,6 +35,7 @@ class AgentRuntime:
         executor: PlanExecutor,
         memory: Memory | None = None,
         memory_policy: MemoryPolicy | None = None,
+        task_memory: TaskMemory | None = None,
         evaluator: Evaluator | None = None,
         reflection_engine: ReflectionEngine | None = None,
         performance_engine: PerformanceEngine | None = None,
@@ -48,6 +51,13 @@ class AgentRuntime:
         self._executor = executor
         self._memory = memory
         self._memory_policy = memory_policy or MemoryPolicy()
+
+        self._task_memory = task_memory
+
+        if self._task_memory is None and memory:
+            self._task_memory = TaskMemory(
+                memory,
+            )
         self._evaluator = evaluator or Evaluator()
         self._reflection_engine = reflection_engine or ReflectionEngine()
         self._performance_engine = performance_engine or PerformanceEngine()
@@ -156,8 +166,15 @@ class AgentRuntime:
             description=user_message,
         )
 
+        task = BackgroundTask(
+            description=user_message,
+        )
+
+        task.start()
+
         state = AgentState(
             goal=goal,
+            background_task=task,
         )
 
         memories = []
@@ -226,6 +243,17 @@ class AgentRuntime:
                 "reason": validation.reason,
             }
 
+            if state.background_task:
+                state.background_task.fail(
+                    "Decision validation failed",
+                )
+
+                state.metadata["task"] = {
+                    "task_id": state.background_task.task_id,
+                    "status": state.background_task.status,
+                    "progress": state.background_task.progress,
+                }
+
             state.completed = True
 
             return state
@@ -238,6 +266,12 @@ class AgentRuntime:
             state.metadata["execution_blocked"] = True
 
             return state
+
+        if state.background_task:
+            state.background_task.update_progress(
+                0.5,
+                step="Executing plan",
+            )
 
         evaluated_observations = self._execute_decision(
             decision,
@@ -324,6 +358,15 @@ class AgentRuntime:
         state.metadata["observation_count"] = len(
             evaluated_observations,
         )
+
+        if state.background_task:
+            state.background_task.complete()
+
+            state.metadata["task"] = {
+                "task_id": state.background_task.task_id,
+                "status": state.background_task.status,
+                "progress": state.background_task.progress,
+            }
 
         state.completed = True
 
@@ -446,6 +489,23 @@ class AgentRuntime:
                 reflection,
                 decision,
             )
+            if (
+                self._task_memory
+                and self._memory_policy.should_store(
+                    evaluated,
+                )
+            ):
+                if reflection.success:
+                    self._task_memory.store_success(
+                        decision.intent,
+                        evaluated.output,
+                    )
+
+                else:
+                    self._task_memory.store_failure(
+                        decision.intent,
+                        reflection.summary,
+                    ) 
 
         return evaluated_observations
 
