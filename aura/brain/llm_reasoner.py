@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 
 from aura.ai.llm_provider import LLMProvider
+from aura.brain.learning import LearningContext
+from aura.brain.prompt_evolution import PromptEvolution
 from aura.brain.reasoning import ReasoningResult
 
 
@@ -14,8 +16,10 @@ class LLMReasoner:
     def __init__(
         self,
         provider: LLMProvider,
+        prompt_evolution: PromptEvolution | None = None,
     ) -> None:
         self._provider = provider
+        self._prompt_evolution = prompt_evolution or PromptEvolution()
 
     @property
     def provider(
@@ -28,12 +32,14 @@ class LLMReasoner:
     def analyze(
         self,
         user_message: str,
+        learning: LearningContext | None = None,
     ) -> ReasoningResult:
         """Analyze user request with LLM."""
 
         response = self._provider.complete(
             self._build_prompt(
                 user_message,
+                learning,
             ),
         )
 
@@ -44,15 +50,37 @@ class LLMReasoner:
     def _build_prompt(
         self,
         user_message: str,
+        learning: LearningContext | None = None,
     ) -> str:
-        """Build reasoning prompt."""
+        """Build adaptive reasoning prompt."""
 
-        return (
+        base = (
             "Analyze the user request and return JSON.\n"
             "Required fields:\n"
             "intent, goal, capability, confidence, risk_level\n\n"
-            f"User request:\n{user_message}"
         )
+
+        if learning:
+            evolution = self._prompt_evolution.evolve(
+                learning,
+            )
+
+            instructions = evolution.get(
+                "instructions",
+                [],
+            )
+
+            if instructions:
+                base += "Adaptive instructions:\n"
+
+                for instruction in instructions:
+                    base += f"- {instruction}\n"
+
+                base += "\n"
+
+        base += f"User request:\n{user_message}"
+
+        return base
 
     def _parse_response(
         self,

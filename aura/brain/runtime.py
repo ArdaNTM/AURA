@@ -11,6 +11,7 @@ from aura.brain.execution_plan import ExecutionPlan
 from aura.brain.executor import PlanExecutor
 from aura.brain.goal import Goal
 from aura.brain.improvement import ImprovementPlan
+from aura.brain.improvement_evaluator import ImprovementEvaluator
 from aura.brain.learning_profile import LearningProfile
 from aura.brain.learning_profile_store import LearningProfileStore
 from aura.brain.memory_policy import MemoryPolicy
@@ -50,6 +51,7 @@ class AgentRuntime:
         execution_guard: ExecutionGuard | None = None,
         memory_consolidator: MemoryConsolidator | None = None,
         memory_optimizer: MemoryOptimizer | None = None,
+        improvement_evaluator: ImprovementEvaluator | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
@@ -76,6 +78,7 @@ class AgentRuntime:
         self._execution_guard = execution_guard or ExecutionGuard(
             brain.tools,
         )
+        self._improvement_evaluator = improvement_evaluator or ImprovementEvaluator()
         if learning_profile is None:
             self._learning_profile = self._learning_profile_store.load()
         else:
@@ -168,6 +171,14 @@ class AgentRuntime:
         """Return learning profile store."""
 
         return self._learning_profile_store
+
+    @property
+    def improvement_evaluator(
+        self,
+    ) -> ImprovementEvaluator:
+        """Return improvement evaluator."""
+
+        return self._improvement_evaluator
 
     def run(
         self,
@@ -294,6 +305,29 @@ class AgentRuntime:
         report = self._performance_engine.evaluate(
             evaluated_observations,
         )
+
+        if decision.strategy:
+
+            previous_score = self._learning_profile.skill_scores.get(
+                decision.intent,
+                0.0,
+            )
+
+            allowed = self._learning_profile.validate_improvement(
+                "strategy",
+                f"Improve strategy {decision.strategy}",
+            )
+
+            if allowed:
+
+                self._learning_profile.register_improvement(
+                    strategy=decision.strategy,
+                    before_score=previous_score,
+                    after_score=report.performance_score,
+                    success=report.performance_score >= previous_score,
+                    notes=("Autonomous improvement feedback"),
+                )
+
         self_evaluation = self._self_evaluation_engine.evaluate(
             self._learning_profile,
             report,

@@ -148,6 +148,10 @@ class Brain:
                 "confidence_error": self._learning_profile.confidence_error,
                 "average_quality": self._learning_profile.average_quality,
             }
+            best_improvement = self._learning_profile.improvement_memory.best_strategy()
+
+            if best_improvement:
+                learning["best_improvement_strategy"] = best_improvement
 
             learning["self_evaluation"] = self._learning_profile.self_evaluation
 

@@ -496,6 +496,17 @@ class Planner:
 
         profile = None
 
+        if self._learning_profile:
+
+            improved = self._learning_profile.improvement_memory.best_strategy()
+
+            if improved:
+                return (
+                    improved,
+                    "low",
+                    0.9,
+                )
+
         if learning:
             skills = learning.get(
                 "skills",

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from aura.brain.improvement_memory import ImprovementMemory
+from aura.brain.improvement_validator import ImprovementValidator
 from aura.brain.skill_registry import SkillRegistry
 
 
@@ -46,6 +48,12 @@ class LearningProfile:
     )
     skill_registry: SkillRegistry = field(
         default_factory=SkillRegistry,
+    )
+    improvement_memory: ImprovementMemory = field(
+        default_factory=ImprovementMemory,
+    )
+    improvement_validator: ImprovementValidator = field(
+        default_factory=ImprovementValidator,
     )
 
     @property
@@ -288,3 +296,33 @@ class LearningProfile:
             "average_duration": average_duration,
             "runs": float(runs),
         }
+
+    def register_improvement(
+        self,
+        strategy: str,
+        before_score: float,
+        after_score: float,
+        success: bool,
+        notes: str = "",
+    ) -> None:
+        """Store autonomous improvement result."""
+
+        self.improvement_memory.add(
+            strategy,
+            before_score,
+            after_score,
+            success,
+            notes,
+        )
+
+    def validate_improvement(
+        self,
+        change_type: str,
+        description: str,
+    ) -> bool:
+        """Validate autonomous improvement."""
+
+        return self.improvement_validator.validate(
+            change_type,
+            description,
+        )

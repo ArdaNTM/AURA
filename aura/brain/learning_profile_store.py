@@ -5,6 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from aura.brain.improvement_memory import (
+    ImprovementMemory,
+    ImprovementRecord,
+)
 from aura.brain.learning_profile import LearningProfile
 from aura.brain.skill_registry import SkillRegistry
 
@@ -39,6 +43,16 @@ class LearningProfileStore:
             "confidence_correct": profile.confidence_correct,
             "confidence_error_total": profile.confidence_error_total,
             "skills": profile.skill_registry.to_dict(),
+            "improvements": [
+                {
+                    "strategy": item.strategy,
+                    "before_score": item.before_score,
+                    "after_score": item.after_score,
+                    "success": item.success,
+                    "notes": item.notes,
+                }
+                for item in profile.improvement_memory.records
+            ],
         }
 
         self._path.write_text(
@@ -70,6 +84,25 @@ class LearningProfileStore:
             )
         )
 
+        improvement_memory = ImprovementMemory()
+
+        for item in data.get(
+            "improvements",
+            [],
+        ):
+            improvement_memory.records.append(
+                ImprovementRecord(
+                    strategy=item["strategy"],
+                    before_score=item["before_score"],
+                    after_score=item["after_score"],
+                    success=item["success"],
+                    notes=item.get(
+                        "notes",
+                        "",
+                    ),
+                )
+            )
+
         return LearningProfile(
             total_tasks=data.get(
                 "total_tasks",
@@ -96,6 +129,7 @@ class LearningProfileStore:
                 {},
             ),
             skill_registry=skill_registry,
+            improvement_memory=improvement_memory,
             tool_scores=data.get(
                 "tool_scores",
                 {},
