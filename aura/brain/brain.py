@@ -242,31 +242,14 @@ class Brain:
         self,
         memory: tuple[str, str],
     ) -> float:
-        """Calculate memory value."""
+        """Calculate memory importance."""
 
-        _, content = memory
+        if self._memory:
+            return self._memory._experience_score(
+                memory,
+            )
 
-        score = 0.0
-
-        if "success=True" in content:
-            score += 1.0
-
-        if "confidence=" in content:
-            try:
-                score += float(
-                    content.split(
-                        "confidence=",
-                    )[1].split(
-                        ";",
-                    )[0],
-                )
-            except (
-                ValueError,
-                IndexError,
-            ):
-                pass
-
-        return score
+        return 0.0
 
     def _strategy_scores(
         self,

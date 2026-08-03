@@ -24,6 +24,7 @@ from aura.brain.self_evaluation_engine import SelfEvaluationEngine
 from aura.brain.state import AgentState
 from aura.brain.task_memory import TaskMemory
 from aura.memory.base import Memory
+from aura.memory.consolidation import MemoryConsolidator
 
 
 class AgentRuntime:
@@ -46,12 +47,13 @@ class AgentRuntime:
         permission_gate: PermissionGate | None = None,
         decision_validator: DecisionValidator | None = None,
         execution_guard: ExecutionGuard | None = None,
+        memory_consolidator: MemoryConsolidator | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
         self._memory = memory
         self._memory_policy = memory_policy or MemoryPolicy()
-
+        self._memory_consolidator = memory_consolidator or MemoryConsolidator()
         self._task_memory = task_memory
 
         if self._task_memory is None and memory:
@@ -579,4 +581,8 @@ class AgentRuntime:
         self._memory.add(
             "assistant",
             content,
+        )
+
+        self._memory_consolidator.consolidate(
+            self._memory,
         )

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from aura.memory.base import Memory
 
 
@@ -37,6 +39,7 @@ class TaskMemory:
                 "task_success=True; "
                 "success=True; "
                 f"strategy={strategy}; "
+                f"timestamp={datetime.now().isoformat()}; "
                 f"output={output}"
             ),
         )
@@ -54,6 +57,7 @@ class TaskMemory:
                 f"task={task}; "
                 "task_success=False; "
                 "success=False; "
+                f"timestamp={datetime.now().isoformat()}; "
                 f"reason={reason}"
             ),
         )
@@ -124,22 +128,8 @@ class TaskMemory:
         self,
         experience: tuple[str, str],
     ) -> float:
-        """Calculate task experience value."""
+        """Use shared memory ranking."""
 
-        _, content = experience
-
-        score = 0.0
-
-        if "task_success=True" in content:
-            score += 1.0
-
-        if "success=True" in content:
-            score += 1.0
-
-        if "strategy=safe_tool_execution" in content:
-            score += 0.5
-
-        elif "strategy=tool_execution" in content:
-            score += 0.1
-
-        return score
+        return self._memory._experience_score(
+            experience,
+        )

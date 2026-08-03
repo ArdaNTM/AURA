@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 
 class Memory(ABC):
@@ -71,14 +72,25 @@ class Memory(ABC):
         self,
         experience: tuple[str, str],
     ) -> float:
-        """Calculate experience value score."""
+        """
+        Calculate adaptive experience value.
+
+        Ranking considers:
+        - success
+        - confidence
+        - strategy quality
+        - recency
+        """
 
         _, content = experience
 
         score = 0.0
 
         if "success=True" in content:
-            score += 1.0
+            score += 2.0
+
+        if "success=False" in content:
+            score -= 2.0
 
         if "confidence=" in content:
             try:
@@ -86,21 +98,61 @@ class Memory(ABC):
                     content.split(
                         "confidence=",
                     )[1].split(
-                        ";"
+                        ";",
                     )[0],
                 )
 
                 score += confidence
+
             except (
                 ValueError,
                 IndexError,
             ):
                 pass
 
-        if "strategy=" in content:
-            score += 0.1
+        if "strategy=safe_tool_execution" in content:
+            score += 0.5
+
+        elif "strategy=tool_execution" in content:
+            score += 0.2
+
+        if "timestamp=" in content:
+            try:
+                timestamp = content.split(
+                    "timestamp=",
+                )[1].split(
+                    ";",
+                )[0]
+
+                created = datetime.fromisoformat(
+                    timestamp,
+                )
+
+                age_days = (datetime.now() - created).days
+
+                score -= min(
+                    age_days * 0.01,
+                    1.0,
+                )
+
+            except (
+                ValueError,
+                IndexError,
+            ):
+                pass
 
         return score
+
+    def consolidate(
+        self,
+    ) -> int:
+        """
+        Consolidate stored memories.
+
+        Default implementation does nothing.
+        """
+
+        return 0
 
     @abstractmethod
     def clear(self) -> None:

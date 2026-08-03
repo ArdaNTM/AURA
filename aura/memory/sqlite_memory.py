@@ -75,6 +75,58 @@ class SQLiteMemory(Memory):
 
         self._connection.commit()
 
+    def consolidate(
+        self,
+    ) -> int:
+        """Remove duplicate stored messages."""
+
+        rows = self.history()
+
+        seen = set()
+
+        unique_rows = []
+
+        removed = 0
+
+        for role, content in rows:
+
+            key = (
+                role,
+                " ".join(
+                    content.casefold().split(),
+                ),
+            )
+
+            if key in seen:
+                removed += 1
+                continue
+
+            seen.add(
+                key,
+            )
+
+            unique_rows.append(
+                (
+                    role,
+                    content,
+                )
+            )
+
+        if removed == 0:
+            return 0
+
+        self._connection.execute("""
+            DELETE FROM messages
+            """)
+
+        for role, content in unique_rows:
+            self.add(
+                role,
+                content,
+            )
+
+        return removed
+
     def close(
         self,
     ) -> None:
