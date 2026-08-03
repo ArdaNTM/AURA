@@ -20,5 +20,5 @@ jobs:
         run: black --check .
       - name: Lint
         run: ruff check .
-      - name: Test
-        run: pytest
+      - name: Run pytest
+        run: python -m pytest
