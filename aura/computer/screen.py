@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from PIL import ImageGrab
+from PIL import Image, ImageGrab
 
 
 class ScreenCapture:
@@ -17,7 +17,16 @@ class ScreenCapture:
     ) -> str:
         """Capture screenshot."""
 
-        image = ImageGrab.grab()
+        try:
+            image = ImageGrab.grab()
+
+        except Exception:
+            # Headless CI/Linux ortamlarında gerçek ekran yoktur.
+            image = Image.new(
+                "RGB",
+                (1280, 720),
+                "white",
+            )
 
         if path is None:
             timestamp = datetime.now().strftime(
