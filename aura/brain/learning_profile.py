@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from aura.brain.skill_registry import SkillRegistry
+
 
 @dataclass
 class LearningProfile:
@@ -41,6 +43,9 @@ class LearningProfile:
     )
     tool_scores: dict[str, dict[str, float]] = field(
         default_factory=dict,
+    )
+    skill_registry: SkillRegistry = field(
+        default_factory=SkillRegistry,
     )
 
     @property
@@ -223,8 +228,40 @@ class LearningProfile:
         self,
         skill: str,
         score: float,
+        success: bool = True,
     ) -> None:
         """Update skill score using gradual learning."""
+
+        self.skill_registry.update(
+            skill,
+            success,
+            score,
+        )
+
+        if skill not in self.skill_scores:
+            self.skill_scores[skill] = score
+            return
+
+        current = self.skill_scores[skill]
+
+        self.skill_scores[skill] = round(
+            (current * 0.8 + score * 0.2),
+            2,
+        )
+
+    def register_skill_reflection(
+        self,
+        skill: str,
+        score: float,
+        reflection,
+    ) -> None:
+        """Update skill using execution and reflection feedback."""
+
+        self.skill_registry.update_reflection(
+            skill,
+            reflection,
+            score,
+        )
 
         if skill not in self.skill_scores:
             self.skill_scores[skill] = score

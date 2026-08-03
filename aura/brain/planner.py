@@ -90,6 +90,14 @@ class Planner:
     ) -> str | None:
         """Resolve executable tool for capability."""
 
+        if self._learning_profile:
+            preferred = self._learning_profile.skill_registry.preferred_tool(
+                capability.name,
+            )
+
+            if preferred:
+                return preferred
+
         discovered = self._tool_discovery.find_tool(
             capability.name,
         )
@@ -489,9 +497,69 @@ class Planner:
         profile = None
 
         if learning:
+            skills = learning.get(
+                "skills",
+            )
+
+            if isinstance(
+                skills,
+                dict,
+            ):
+                skill = skills.get(
+                    skill_name,
+                )
+
+                if isinstance(
+                    skill,
+                    dict,
+                ):
+                    confidence = skill.get(
+                        "confidence",
+                        0.0,
+                    )
+
+                    if isinstance(
+                        confidence,
+                        (int, float),
+                    ):
+                        if confidence < 0.5:
+                            return (
+                                "safe_tool_execution",
+                                "medium",
+                                0.75,
+                            )
+
+                        if confidence > 0.9:
+                            return (
+                                "tool_execution",
+                                "low",
+                                0.95,
+                            )
+
+        if learning:
             profile = learning.get(
                 "profile",
             )
+
+        if self._learning_profile:
+            skill_confidence = self._learning_profile.skill_registry.confidence(
+                skill_name,
+            )
+
+            if skill_confidence is not None:
+                if skill_confidence < 0.5:
+                    return (
+                        "safe_tool_execution",
+                        "medium",
+                        0.75,
+                    )
+
+                if skill_confidence > 0.9:
+                    return (
+                        "tool_execution",
+                        "low",
+                        0.95,
+                    )
 
         if self._learning_profile:
             skill_score = self._learning_profile.skill_scores.get(

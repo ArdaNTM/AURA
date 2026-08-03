@@ -68,6 +68,22 @@ class Memory(ABC):
             reverse=True,
         )
 
+    def recall(
+        self,
+        query: str,
+    ) -> list[tuple[str, str]]:
+        """Recall ranked memories."""
+
+        memories = self.search(
+            query,
+        )
+
+        return sorted(
+            memories,
+            key=self._experience_score,
+            reverse=True,
+        )
+
     def _experience_score(
         self,
         experience: tuple[str, str],

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from aura.brain.learning_profile import LearningProfile
+from aura.brain.skill_registry import SkillRegistry
 
 
 class LearningProfileStore:
@@ -37,6 +38,7 @@ class LearningProfileStore:
             "confidence_predictions": profile.confidence_predictions,
             "confidence_correct": profile.confidence_correct,
             "confidence_error_total": profile.confidence_error_total,
+            "skills": profile.skill_registry.to_dict(),
         }
 
         self._path.write_text(
@@ -59,6 +61,13 @@ class LearningProfileStore:
             self._path.read_text(
                 encoding="utf-8",
             ),
+        )
+
+        skill_registry = SkillRegistry.from_dict(
+            data.get(
+                "skills",
+                {},
+            )
         )
 
         return LearningProfile(
@@ -86,6 +95,7 @@ class LearningProfileStore:
                 "skill_scores",
                 {},
             ),
+            skill_registry=skill_registry,
             tool_scores=data.get(
                 "tool_scores",
                 {},

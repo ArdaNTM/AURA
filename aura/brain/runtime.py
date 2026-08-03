@@ -25,6 +25,7 @@ from aura.brain.state import AgentState
 from aura.brain.task_memory import TaskMemory
 from aura.memory.base import Memory
 from aura.memory.consolidation import MemoryConsolidator
+from aura.memory.optimization import MemoryOptimizer
 
 
 class AgentRuntime:
@@ -48,12 +49,14 @@ class AgentRuntime:
         decision_validator: DecisionValidator | None = None,
         execution_guard: ExecutionGuard | None = None,
         memory_consolidator: MemoryConsolidator | None = None,
+        memory_optimizer: MemoryOptimizer | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
         self._memory = memory
         self._memory_policy = memory_policy or MemoryPolicy()
         self._memory_consolidator = memory_consolidator or MemoryConsolidator()
+        self._memory_optimizer = memory_optimizer or MemoryOptimizer()
         self._task_memory = task_memory
 
         if self._task_memory is None and memory:
@@ -109,6 +112,14 @@ class AgentRuntime:
         """Return memory policy."""
 
         return self._memory_policy
+
+    @property
+    def memory_optimizer(
+        self,
+    ) -> MemoryOptimizer:
+        """Return memory optimizer."""
+
+        return self._memory_optimizer
 
     @property
     def evaluator(
@@ -469,9 +480,10 @@ class AgentRuntime:
                 success=reflection.success,
             )
 
-            self._learning_profile.register_skill_result(
+            self._learning_profile.register_skill_reflection(
                 decision.intent,
                 evaluated.score,
+                reflection,
             )
             tool_snapshot = self._executor.tool_runner.reliability_tracker.snapshot()
 
@@ -586,3 +598,35 @@ class AgentRuntime:
         self._memory_consolidator.consolidate(
             self._memory,
         )
+
+        expired = self._memory_optimizer.find_expired(
+            self._memory,
+        )
+
+        if expired:
+            self._remove_expired_memories(
+                expired,
+            )
+
+        self._memory_optimizer.compress(
+            self._memory,
+        )
+
+    def _remove_expired_memories(
+        self,
+        memories: list[tuple[str, str]],
+    ) -> None:
+        """Remove expired low value memories."""
+
+        if not self._memory:
+            return
+
+        remaining = [item for item in self._memory.history() if item not in memories]
+
+        self._memory.clear()
+
+        for role, content in remaining:
+            self._memory.add(
+                role,
+                content,
+            )

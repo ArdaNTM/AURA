@@ -1,18 +1,46 @@
+from aura.ai.tool_runner import ToolRunner
+from aura.brain.brain import Brain
+from aura.brain.executor import PlanExecutor
 from aura.brain.learning_profile import LearningProfile
+from aura.brain.runtime import AgentRuntime
+from aura.core.tools import ToolRegistry
+from aura.tools import CalculatorTool
 
 
-def test_skill_learning_updates_profile():
+def test_runtime_updates_skill_registry():
+
+    registry = ToolRegistry()
+
+    registry.register(
+        CalculatorTool(),
+    )
 
     profile = LearningProfile()
 
-    profile.register_skill_result(
-        "calculation",
-        1.0,
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+        learning_profile=profile,
     )
 
-    profile.register_skill_result(
-        "calculation",
-        0.5,
+    runtime.run(
+        "2+2 hesapla",
     )
 
-    assert profile.skill_scores["calculation"] == 0.9
+    skill = profile.skill_registry.get(
+        "calculation",
+    )
+
+    assert skill is not None
+
+    assert skill.usage_count == 1
+
+    assert skill.success_rate == 1.0
+
+    assert skill.confidence > 0

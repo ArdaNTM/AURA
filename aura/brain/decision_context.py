@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from aura.brain.goal import Goal
+from aura.brain.user_profile import UserProfile
 
 
 @dataclass
@@ -22,6 +23,8 @@ class DecisionContext:
     memory: list[tuple[str, str]] = field(
         default_factory=list,
     )
+
+    user_profile: UserProfile | None = None
 
     environment: dict[str, object] = field(
         default_factory=dict,

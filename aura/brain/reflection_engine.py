@@ -25,6 +25,16 @@ class ReflectionEngine:
                 "strategy": decision.strategy,
             }
 
+            skill_context = decision.metadata.get(
+                "skill_context",
+            )
+
+            if isinstance(
+                skill_context,
+                dict,
+            ):
+                context["skill"] = skill_context
+
         if not observation.success:
             retry_strategy = self._select_retry_strategy(
                 decision,

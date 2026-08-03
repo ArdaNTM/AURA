@@ -13,6 +13,8 @@ from aura.brain.meta_learner import MetaLearner
 from aura.brain.models import Decision
 from aura.brain.planner import Planner
 from aura.brain.self_evaluation_engine import SelfEvaluationEngine
+from aura.brain.user_profile import UserProfile
+from aura.memory.recall import RecallEngine
 
 if TYPE_CHECKING:
     from aura.core.tools import ToolRegistry
@@ -32,11 +34,14 @@ class Brain:
         learning_profile: LearningProfile | None = None,
         meta_learner: MetaLearner | None = None,
         self_evaluator: SelfEvaluationEngine | None = None,
+        user_profile: UserProfile | None = None,
     ) -> None:
         self._tools = tools
         self._memory = memory
+        self._recall_engine = RecallEngine(memory) if memory else None
         self._learning_context = learning_context
         self._learning_profile = learning_profile
+        self._user_profile = user_profile
         self._meta_learner = meta_learner or MetaLearner()
         self._self_evaluator = self_evaluator or SelfEvaluationEngine()
         self._planner = planner or Planner(
@@ -62,12 +67,27 @@ class Brain:
         return self._memory
 
     @property
+    def recall_engine(
+        self,
+    ) -> RecallEngine | None:
+        """Return memory recall engine."""
+        return self._recall_engine
+
+    @property
     def learning_context(self) -> LearningContext | None:
         return self._learning_context
 
     @property
     def learning_profile(self) -> LearningProfile | None:
         return self._learning_profile
+
+    @property
+    def user_profile(
+        self,
+    ) -> UserProfile | None:
+        """Return user personalization profile."""
+
+        return self._user_profile
 
     @property
     def meta_learner(self) -> MetaLearner:
@@ -95,7 +115,14 @@ class Brain:
         )
 
         learning = {}
-
+        if self._user_profile:
+            learning["user_profile"] = {
+                "preferences": self._user_profile.preferences,
+                "coding_style": self._user_profile.coding_style,
+                "workflow": self._user_profile.workflow,
+                "favorite_tools": self._user_profile.favorite_tools,
+                "communication_style": self._user_profile.communication_style,
+            }
         if self._learning_context:
             learning.update(
                 self._learning_context.summarize(),
@@ -124,10 +151,25 @@ class Brain:
 
             learning["self_evaluation"] = self._learning_profile.self_evaluation
 
+            learning["skills"] = {
+                skill.name: {
+                    "confidence": skill.confidence,
+                    "success_rate": skill.success_rate,
+                    "usage_count": skill.usage_count,
+                    "required_tools": skill.required_tools,
+                }
+                for skill in self._learning_profile.skill_registry.all()
+            }
+
+        if memories is None and self._recall_engine:
+            memories = self._recall_engine.recall(
+                user_message,
+            )
+
         if memories:
 
-            ranked_memories = self._rank_memories(
-                memories,
+            ranked_memories = (
+                self._recall_engine.rank(memories) if self._recall_engine else memories
             )
 
             learning["retrieved_memories"] = ranked_memories
@@ -207,6 +249,18 @@ class Brain:
             context,
         )
 
+        if self._learning_profile:
+            strongest_skill = self._learning_profile.skill_registry.strongest()
+
+            if strongest_skill:
+                decision.metadata["skill_context"] = {
+                    "name": strongest_skill.name,
+                    "confidence": strongest_skill.confidence,
+                    "success_rate": strongest_skill.success_rate,
+                    "usage_count": strongest_skill.usage_count,
+                    "required_tools": strongest_skill.required_tools,
+                }
+
         if memories:
             decision.metadata["memory"] = memories
 
@@ -225,31 +279,6 @@ class Brain:
         )
 
         return decision, action
-
-    def _rank_memories(
-        self,
-        memories: list[tuple[str, str]],
-    ) -> list[tuple[str, str]]:
-        """Rank memories by experience quality."""
-
-        return sorted(
-            memories,
-            key=self._memory_score,
-            reverse=True,
-        )
-
-    def _memory_score(
-        self,
-        memory: tuple[str, str],
-    ) -> float:
-        """Calculate memory importance."""
-
-        if self._memory:
-            return self._memory._experience_score(
-                memory,
-            )
-
-        return 0.0
 
     def _strategy_scores(
         self,
@@ -295,6 +324,7 @@ class Brain:
             goal=goal,
             learning=learning or {},
             memory=memories or [],
+            user_profile=self._user_profile,
             metadata={
                 "goal_description": goal.description,
             },
