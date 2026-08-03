@@ -152,6 +152,13 @@ class Planner:
                 learning,
             )
 
+        if capability.name == "computer":
+            return self._build_computer(
+                capability,
+                analysis,
+                learning,
+            )
+
         if capability.requires_permission:
             return self._build_permission_capability(
                 capability,
@@ -857,6 +864,58 @@ class Planner:
                 "capability": "filesystem",
                 "requires_permission": True,
             },
+        )
+
+    def _build_computer(
+        self,
+        capability,
+        analysis: IntentAnalysis,
+        learning,
+    ) -> Decision:
+        """Create computer execution decision."""
+
+        action = str(
+            analysis.entities.get(
+                "action",
+                "open",
+            )
+        )
+
+        application = analysis.entities.get(
+            "application",
+        )
+
+        computer_action = action
+
+        if application:
+            computer_action = f"{action}:{application}"
+
+        metadata = {
+            "action": computer_action,
+            "capability": capability.name,
+            "requires_permission": True,
+        }
+
+        if learning:
+            metadata["learning"] = learning
+
+        return Decision(
+            intent="computer",
+            confidence=0.9,
+            requires_tool=True,
+            requires_permission=True,
+            target="computer",
+            priority="normal",
+            risk_level="high",
+            strategy="permission_required",
+            explanation="computer capability requires permission.",
+            plan=self._plan_builder.build_tool_execution(
+                tool_name="computer",
+                parameters={
+                    "action": computer_action,
+                },
+            ),
+            metadata=metadata,
         )
 
     def _extract_filename(

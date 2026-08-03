@@ -40,3 +40,45 @@ def test_tool_runner_returns_failure() -> None:
     assert result.name == "missing"
 
     assert "Unknown tool" in result.error
+
+
+def test_tool_runner_records_reliability():
+    registry = ToolRegistry()
+    registry.register(EchoTool())
+
+    runner = ToolRunner(
+        registry,
+    )
+
+    result = runner.run(
+        "echo",
+        "hello",
+    )
+
+    stats = runner.reliability_tracker.get(
+        "echo",
+    )
+
+    assert result.success
+    assert stats.runs == 1
+    assert stats.successes == 1
+
+
+def test_tool_runner_records_failed_reliability():
+    registry = ToolRegistry()
+
+    runner = ToolRunner(
+        registry,
+    )
+
+    result = runner.run(
+        "missing",
+    )
+
+    stats = runner.reliability_tracker.get(
+        "missing",
+    )
+
+    assert not result.success
+    assert stats.runs == 1
+    assert stats.failures == 1

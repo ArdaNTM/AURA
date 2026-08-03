@@ -158,3 +158,51 @@ def test_executor_runs_custom_tool_action() -> None:
     assert results[0].name == "echo"
 
     assert results[0].output == "hello"
+
+
+class FailingTool(Tool):
+    @property
+    def name(self) -> str:
+        return "failing"
+
+    def execute(
+        self,
+    ) -> str:
+        raise RuntimeError(
+            "temporary failure",
+        )
+
+
+def test_executor_retries_failed_tool():
+    registry = ToolRegistry()
+
+    registry.register(
+        FailingTool(),
+    )
+
+    executor = PlanExecutor(
+        ToolRunner(
+            registry,
+        ),
+    )
+
+    decision = Decision(
+        intent="test",
+        requires_tool=True,
+        plan=[
+            PlanStep(
+                description="Fail tool",
+                action="failing",
+            )
+        ],
+    )
+
+    results = executor.execute(
+        decision,
+    )
+
+    assert len(results) == 1
+
+    assert not results[0].success
+
+    assert results[0].metadata["recovery"]["retry_available"]

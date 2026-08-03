@@ -100,8 +100,25 @@ class ScreenCaptureTool(Tool):
                 output=result.description,
                 metadata={
                     "image_path": image_path,
-                    "objects": result.objects,
-                    "confidence": result.confidence,
+                    "vision": {
+                        "description": result.description,
+                        "objects": result.objects,
+                        "confidence": result.confidence,
+                        "text": result.text,
+                        "regions": result.regions,
+                        "elements": [
+                            {
+                                "name": element.name,
+                                "type": element.element_type,
+                                "x": element.x,
+                                "y": element.y,
+                                "confidence": element.confidence,
+                                "metadata": element.metadata,
+                            }
+                            for element in result.elements
+                        ],
+                        "metadata": result.metadata,
+                    },
                 },
             )
 

@@ -27,7 +27,10 @@ from aura.memory.base import Memory
 from aura.memory.factory import MemoryFactory
 from aura.tools import (
     CalculatorTool,
+    ComputerTool,
     FileSystemTool,
+    ScreenCaptureTool,
+    SearchTool,
 )
 from aura.ui.cli import CLI
 
@@ -198,8 +201,25 @@ class AuraApplication:
         self.tools.register(
             CalculatorTool(),
         )
+
         self.tools.register(
             FileSystemTool(),
+        )
+
+        self.tools.register(
+            SearchTool(
+                memory=self.container.resolve(
+                    Memory,
+                ),
+            ),
+        )
+
+        self.tools.register(
+            ComputerTool(),
+        )
+
+        self.tools.register(
+            ScreenCaptureTool(),
         )
 
         self.logger = configure_logging(

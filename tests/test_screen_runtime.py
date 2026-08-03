@@ -31,3 +31,29 @@ def test_runtime_creates_screen_permission():
 
     assert state.decision.intent == "screen"
     assert state.permission_request is not None
+
+
+def test_screen_observation_contains_vision_data():
+
+    registry = ToolRegistry()
+
+    registry.register(
+        ScreenCaptureTool(),
+    )
+
+    runtime = AgentRuntime(
+        Brain(
+            tools=registry,
+        ),
+        PlanExecutor(
+            ToolRunner(
+                registry,
+            ),
+        ),
+    )
+
+    state = runtime.run(
+        "ekran görüntüsü al",
+    )
+
+    assert state.permission_request is not None

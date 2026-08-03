@@ -130,12 +130,19 @@ class IntentEngine:
                 "kapat",
                 "uygulama",
                 "chrome",
+                "browser",
+                "tarayıcı",
                 "bilgisayar",
+                "notepad",
+                "not defteri",
             ]
         ):
             return IntentAnalysis(
                 intent="computer",
                 confidence=0.90,
+                entities=self._extract_computer_action(
+                    message,
+                ),
             )
 
         if any(
@@ -199,3 +206,43 @@ class IntentEngine:
             return expression
 
         return None
+
+    def _extract_computer_action(
+        self,
+        message: str,
+    ) -> dict[str, object]:
+        """Extract computer operation details."""
+
+        text = message.casefold()
+
+        applications = {
+            "chrome": "chrome",
+            "google chrome": "chrome",
+            "browser": "chrome",
+            "tarayıcı": "chrome",
+            "notepad": "notepad",
+            "not defteri": "notepad",
+        }
+
+        application = None
+
+        for key, value in applications.items():
+            if key in text:
+                application = value
+                break
+
+        action = "open"
+
+        if any(
+            word in text
+            for word in [
+                "kapat",
+                "close",
+            ]
+        ):
+            action = "close"
+
+        return {
+            "action": action,
+            "application": application,
+        }

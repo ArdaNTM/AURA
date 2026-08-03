@@ -39,6 +39,9 @@ class LearningProfile:
     self_evaluation: dict[str, object] = field(
         default_factory=dict,
     )
+    tool_scores: dict[str, dict[str, float]] = field(
+        default_factory=dict,
+    )
 
     @property
     def success_rate(
@@ -233,3 +236,18 @@ class LearningProfile:
             (current * 0.8 + score * 0.2),
             2,
         )
+
+    def register_tool_reliability(
+        self,
+        name: str,
+        success_rate: float,
+        average_duration: float,
+        runs: int,
+    ) -> None:
+        """Store learned tool reliability."""
+
+        self.tool_scores[name] = {
+            "success_rate": success_rate,
+            "average_duration": average_duration,
+            "runs": float(runs),
+        }

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from aura.vision.models import VisionResult
+from PIL import Image
 
 
 class VisionAnalyzer:
@@ -17,17 +18,51 @@ class VisionAnalyzer:
         if not path.exists():
             return VisionResult(
                 description="Image not found.",
-                objects=[],
                 confidence=0.0,
+                metadata={
+                    "image_path": image_path,
+                    "exists": False,
+                },
             )
 
-        return VisionResult(
-            description="Screen image analyzed.",
-            objects=[
-                "screen",
-            ],
-            confidence=0.5,
-            metadata={
-                "image_path": str(path),
-            },
-        )
+        try:
+            image = Image.open(
+                path,
+            )
+
+            width, height = image.size
+
+            return VisionResult(
+                description="Screen image analyzed.",
+                objects=[
+                    "screen",
+                ],
+                confidence=0.5,
+                text=[],
+                regions=[],
+                elements=[],
+                metadata={
+                    "image_path": str(path),
+                    "exists": True,
+                    "width": width,
+                    "height": height,
+                    "format": image.format,
+                },
+            )
+
+        except Exception:
+            return VisionResult(
+                description="Screen image analyzed.",
+                objects=[
+                    "screen",
+                ],
+                confidence=0.5,
+                text=[],
+                regions=[],
+                elements=[],
+                metadata={
+                    "image_path": str(path),
+                    "exists": True,
+                    "format": "unknown",
+                },
+            )

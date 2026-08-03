@@ -6,6 +6,7 @@ from aura.ai.tool_runner import ToolRunner
 from aura.brain.models import Decision, PlanStep
 from aura.brain.observation import Observation
 from aura.brain.permission_runtime import PermissionRuntime
+from aura.brain.tool_recovery import ToolRecovery
 from aura.core.tool_result import ToolResult
 
 
@@ -16,9 +17,11 @@ class PlanExecutor:
         self,
         tool_runner: ToolRunner,
         permission_runtime: PermissionRuntime | None = None,
+        recovery: ToolRecovery | None = None,
     ) -> None:
         self._tool_runner = tool_runner
         self._permission_runtime = permission_runtime or PermissionRuntime()
+        self._recovery = recovery or ToolRecovery()
 
     @property
     def tool_runner(
@@ -106,7 +109,37 @@ class PlanExecutor:
         ):
             return None
 
-        return self._tool_runner.run(
-            step.action,
-            **step.metadata,
-        )
+        attempt = 0
+        recovery_metadata: dict[str, object] = {}
+
+        while True:
+            result = self._tool_runner.run(
+                step.action,
+                **step.metadata,
+            )
+
+            if not self._recovery.should_retry(
+                result,
+                attempt,
+            ):
+                if recovery_metadata:
+                    return ToolResult(
+                        name=result.name,
+                        output=result.output,
+                        success=result.success,
+                        error=result.error,
+                        duration=result.duration,
+                        timestamp=result.timestamp,
+                        metadata=result.metadata | recovery_metadata,
+                    )
+
+                return result
+
+            attempt += 1
+
+            recovery_metadata = {
+                "recovery": self._recovery.analyze(
+                    result,
+                ),
+                "retry_attempt": attempt,
+            }

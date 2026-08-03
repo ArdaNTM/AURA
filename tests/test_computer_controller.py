@@ -10,3 +10,14 @@ def test_computer_controller_rejects_unknown_action():
     )
 
     assert "Unsupported" in result
+
+
+def test_computer_controller_blocks_unknown_application():
+
+    controller = ComputerController()
+
+    result = controller.execute_action(
+        "open:unknown_app",
+    )
+
+    assert "Blocked" in result

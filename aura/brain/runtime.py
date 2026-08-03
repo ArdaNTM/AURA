@@ -428,7 +428,15 @@ class AgentRuntime:
                 decision.intent,
                 evaluated.score,
             )
+            tool_snapshot = self._executor.tool_runner.reliability_tracker.snapshot()
 
+            for name, stats in tool_snapshot.items():
+                self._learning_profile.register_tool_reliability(
+                    name,
+                    stats["success_rate"],
+                    stats["average_duration"],
+                    int(stats["runs"]),
+                )
             self._learning_profile_store.save(
                 self._learning_profile,
             )
