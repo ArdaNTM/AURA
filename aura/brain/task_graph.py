@@ -74,8 +74,7 @@ class TaskGraph:
         node = self._nodes[task_id]
 
         return all(
-            self._nodes[dependency].completed
-            for dependency in node.dependencies
+            self._nodes[dependency].completed for dependency in node.dependencies
         )
 
     def next_available(

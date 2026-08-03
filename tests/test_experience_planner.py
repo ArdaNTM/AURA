@@ -27,15 +27,10 @@ def test_experience_failure_adds_recovery_step():
 
     assert len(updated) == 2
 
-    assert (
-        updated[0].action
-        == "experience_recovery"
-    )
+    assert updated[0].action == "experience_recovery"
 
-    assert (
-        "Missing package"
-        in updated[0].metadata["reason"]
-    )
+    assert "Missing package" in updated[0].metadata["reason"]
+
 
 def test_previous_experience_changes_plan():
     brain = Brain()
@@ -55,4 +50,4 @@ def test_previous_experience_changes_plan():
     )
 
     assert decision.plan
-    assert "experience" in decision.metadata    
+    assert "experience" in decision.metadata

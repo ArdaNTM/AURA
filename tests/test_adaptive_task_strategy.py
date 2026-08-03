@@ -23,7 +23,4 @@ def test_previous_task_failure_changes_strategy():
         memories=memory.history(),
     )
 
-    assert (
-        decision.strategy
-        == "safe_tool_execution"
-    )
+    assert decision.strategy == "safe_tool_execution"

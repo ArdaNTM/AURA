@@ -19,8 +19,7 @@ class TaskStore:
             path,
         )
 
-        self._connection.execute(
-            """
+        self._connection.execute("""
             CREATE TABLE IF NOT EXISTS tasks (
                 id TEXT PRIMARY KEY,
                 description TEXT,
@@ -28,8 +27,7 @@ class TaskStore:
                 progress REAL,
                 current_step TEXT
             )
-            """
-        )
+            """)
 
         self._connection.commit()
 
@@ -66,9 +64,7 @@ class TaskStore:
             FROM tasks
             WHERE id=?
             """,
-            (
-                task_id,
-            ),
+            (task_id,),
         ).fetchone()
 
         if row is None:

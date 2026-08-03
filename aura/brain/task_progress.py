@@ -36,11 +36,7 @@ class TaskProgressTracker:
     ) -> int:
         """Return completed task count."""
 
-        return sum(
-            1
-            for node in self._graph.nodes.values()
-            if node.completed
-        )
+        return sum(1 for node in self._graph.nodes.values() if node.completed)
 
     def percentage(
         self,

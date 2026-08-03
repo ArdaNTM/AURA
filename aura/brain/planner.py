@@ -58,10 +58,7 @@ class Planner:
         self._llm_confidence_threshold = llm_confidence_threshold
         self._confidence_guard_threshold = confidence_guard_threshold
         self._learning_profile = learning_profile
-        self._experience_planner = (
-            experience_planner
-            or ExperiencePlanner()
-        )        
+        self._experience_planner = experience_planner or ExperiencePlanner()
 
     @property
     def capabilities(

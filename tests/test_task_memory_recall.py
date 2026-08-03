@@ -25,11 +25,11 @@ def test_brain_reads_previous_task_failures():
 
     learning = decision.metadata["learning"]
 
-    assert len(
-        learning["task_failures"],
-    ) == 1
-
     assert (
-        "Missing package"
-        in learning["task_failures"][0]
+        len(
+            learning["task_failures"],
+        )
+        == 1
     )
+
+    assert "Missing package" in learning["task_failures"][0]

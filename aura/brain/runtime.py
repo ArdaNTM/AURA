@@ -489,11 +489,8 @@ class AgentRuntime:
                 reflection,
                 decision,
             )
-            if (
-                self._task_memory
-                and self._memory_policy.should_store(
-                    evaluated,
-                )
+            if self._task_memory and self._memory_policy.should_store(
+                evaluated,
             ):
                 if reflection.success:
                     self._task_memory.store_success(
@@ -505,7 +502,7 @@ class AgentRuntime:
                     self._task_memory.store_failure(
                         decision.intent,
                         reflection.summary,
-                    ) 
+                    )
 
         return evaluated_observations
 

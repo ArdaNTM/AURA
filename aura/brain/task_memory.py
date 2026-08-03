@@ -64,11 +64,7 @@ class TaskMemory:
     ) -> list[tuple[str, str]]:
         """Recall previous task experiences."""
 
-        return [
-            item
-            for item in self._memory.history()
-            if f"task={task}" in item[1]
-        ]
+        return [item for item in self._memory.history() if f"task={task}" in item[1]]
 
     def previous_failures(
         self,
@@ -79,10 +75,7 @@ class TaskMemory:
         return [
             item
             for item in self.recall(task)
-            if (
-                "task_success=False" in item[1]
-                or "success=False" in item[1]
-            )
+            if ("task_success=False" in item[1] or "success=False" in item[1])
         ]
 
     def has_previous_failure(
@@ -108,10 +101,7 @@ class TaskMemory:
             for item in self.recall(
                 task,
             )
-            if (
-                "task_success=True" in item[1]
-                or "success=True" in item[1]
-            )
+            if ("task_success=True" in item[1] or "success=True" in item[1])
         ]
 
     def rank_experiences(

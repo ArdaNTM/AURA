@@ -135,24 +135,18 @@ class Brain:
             task_failures = [
                 content
                 for _, content in ranked_memories
-                if (
-                    "task_success=False" in content
-                    or "success=False" in content
-                )
+                if ("task_success=False" in content or "success=False" in content)
             ]
 
             if task_failures:
                 learning["has_failures"] = True
 
-            learning["task_failures"] = task_failures            
+            learning["task_failures"] = task_failures
 
             task_failures = [
                 content
                 for _, content in ranked_memories
-                if (
-                    "task_success=False" in content
-                    or "success=False" in content
-                )
+                if ("task_success=False" in content or "success=False" in content)
             ]
 
             learning["task_failures"] = task_failures
@@ -160,10 +154,7 @@ class Brain:
             task_successes = [
                 content
                 for _, content in ranked_memories
-                if (
-                    "task_success=True" in content
-                    or "success=True" in content
-                )
+                if ("task_success=True" in content or "success=True" in content)
             ]
 
             learning["task_successes"] = task_successes
@@ -183,10 +174,7 @@ class Brain:
             task_experiences = [
                 content
                 for _, content in ranked_memories
-                if (
-                    "task_success=True" in content
-                    and "strategy=" in content
-                )
+                if ("task_success=True" in content and "strategy=" in content)
             ]
 
             learning["task_experiences"] = task_experiences

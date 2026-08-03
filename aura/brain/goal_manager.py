@@ -55,11 +55,7 @@ class GoalManager:
     ) -> list[Goal]:
         """Return active goals."""
 
-        return [
-            goal
-            for goal in self._goals.values()
-            if goal.is_active
-        ]
+        return [goal for goal in self._goals.values() if goal.is_active]
 
     def update_progress(
         self,

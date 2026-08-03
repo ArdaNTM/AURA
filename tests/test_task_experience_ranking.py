@@ -28,7 +28,4 @@ def test_task_memory_ranks_best_experience():
 
     assert len(ranked) == 2
 
-    assert (
-        "safe_tool_execution"
-        in ranked[0][1]
-    )
+    assert "safe_tool_execution" in ranked[0][1]
