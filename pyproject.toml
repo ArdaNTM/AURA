@@ -8,7 +8,12 @@ version = "0.2.0"
 description = "Artificial Universal Responsive Assistant"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["openai>=1.99.0", "pydantic-settings>=2.10.0", "rich>=14.0.0"]
+dependencies = [
+    "openai>=1.99.0",
+    "pydantic-settings>=2.10.0",
+    "rich>=14.0.0",
+    "Pillow>=10.0.0",
+]
 
 [project.optional-dependencies]
 dev = ["black>=25.0.0", "pytest>=8.4.0", "ruff>=0.12.0"]
