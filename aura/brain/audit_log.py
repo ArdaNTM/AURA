@@ -1,45 +1,58 @@
-"""Audit records for autonomous changes."""
+"""Execution audit logging."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 
 @dataclass
 class AuditEntry:
-    """Single improvement audit entry."""
-
-    change_type: str
-
-    description: str
-
+    action: str
+    success: bool
     approved: bool
-
+    details: str
     timestamp: datetime
 
 
-@dataclass
 class AuditLog:
-    """Store autonomous change history."""
+    """Store security events."""
 
-    entries: list[AuditEntry] = field(
-        default_factory=list,
-    )
+    def __init__(self):
+        self._entries: list[AuditEntry] = []
+
+    @property
+    def entries(self):
+        return self._entries
+
+    def record(
+        self,
+        action: str,
+        success: bool,
+        approved: bool,
+        details: str = "",
+    ):
+        self._entries.append(
+            AuditEntry(
+                action=action,
+                success=success,
+                approved=approved,
+                details=details,
+                timestamp=datetime.now(),
+            )
+        )
 
     def add(
         self,
         change_type: str,
         description: str,
-        approved: bool,
+        allowed: bool,
     ) -> None:
-        """Record change attempt."""
+        """Record improvement audit event."""
 
-        self.entries.append(
-            AuditEntry(
-                change_type=change_type,
-                description=description,
-                approved=approved,
-                timestamp=datetime.now(),
-            ),
+        self.record(
+            action=change_type,
+            success=allowed,
+            approved=allowed,
+            details=description,
         )

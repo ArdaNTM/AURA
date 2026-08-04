@@ -1,37 +1,80 @@
-"""Safety rules for autonomous improvement."""
+"""Final safety policy layer for AURA."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
+
+@dataclass
+class SafetyDecision:
+    allowed: bool
+    requires_permission: bool
+    reason: str
+
 
 class SafetyPolicy:
-    """Define allowed and restricted improvements."""
+    """Evaluate execution safety."""
 
-    SAFE_CHANGES = {
-        "strategy",
-        "confidence",
-        "prompt",
-        "tool_preference",
+    HIGH_RISK_ACTIONS = {
+        "delete_file",
+        "format_disk",
+        "shutdown",
+        "credential_access",
     }
 
-    HIGH_RISK_CHANGES = {
-        "core_code",
-        "security",
-        "permission_system",
-        "execution_guard",
+    MEDIUM_RISK_ACTIONS = {
+        "write_file",
+        "execute_command",
+        "install_package",
     }
+
+    def evaluate(
+        self,
+        action: str,
+        risk_level: str | None = None,
+    ) -> SafetyDecision:
+        """Check action safety."""
+
+        normalized = action.lower()
+
+        if normalized in self.HIGH_RISK_ACTIONS:
+            return SafetyDecision(
+                allowed=False,
+                requires_permission=True,
+                reason="High risk action requires approval.",
+            )
+
+        if normalized in self.MEDIUM_RISK_ACTIONS:
+            return SafetyDecision(
+                allowed=True,
+                requires_permission=True,
+                reason="Medium risk action requires audit.",
+            )
+
+        if risk_level == "HIGH":
+            return SafetyDecision(
+                allowed=False,
+                requires_permission=True,
+                reason="High risk decision blocked.",
+            )
+
+        return SafetyDecision(
+            allowed=True,
+            requires_permission=False,
+            reason="Safe execution.",
+        )
 
     def is_allowed(
         self,
         change_type: str,
     ) -> bool:
-        """Check whether change is allowed."""
+        """Check whether autonomous improvement is allowed."""
 
-        return change_type in self.SAFE_CHANGES
+        blocked_changes = {
+            "security",
+            "permission",
+            "safety",
+            "rollback",
+        }
 
-    def requires_permission(
-        self,
-        change_type: str,
-    ) -> bool:
-        """Check whether approval is required."""
-
-        return change_type in self.HIGH_RISK_CHANGES
+        return change_type not in blocked_changes

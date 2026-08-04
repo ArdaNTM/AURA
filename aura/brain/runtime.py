@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from aura.brain.audit_log import AuditLog
 from aura.brain.background_task import BackgroundTask
 from aura.brain.brain import Brain
 from aura.brain.decision_validator import DecisionValidator
@@ -23,6 +24,7 @@ from aura.brain.permission_gate import PermissionGate
 from aura.brain.permission_request import PermissionRequest
 from aura.brain.permission_service import PermissionService
 from aura.brain.reflection_engine import ReflectionEngine
+from aura.brain.rollback import RollbackManager
 from aura.brain.self_evaluation_engine import SelfEvaluationEngine
 from aura.brain.self_improvement import SelfImprovementEngine
 from aura.brain.state import AgentState
@@ -67,6 +69,8 @@ class AgentRuntime:
         vision_controller: VisionController | None = None,
         vision_memory: VisionMemory | None = None,
         self_improvement_engine=None,
+        audit_log: AuditLog | None = None,
+        rollback_manager: RollbackManager | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
@@ -108,6 +112,9 @@ class AgentRuntime:
         self._self_improvement_engine = (
             self_improvement_engine or SelfImprovementEngine()
         )
+        self._audit_log = audit_log or AuditLog()
+
+        self._rollback_manager = rollback_manager or RollbackManager()
 
     @property
     def brain(
@@ -241,6 +248,14 @@ class AgentRuntime:
     def long_term_memory(self):
 
         return self._long_term_memory
+
+    @property
+    def audit_log(self):
+        return self._audit_log
+
+    @property
+    def rollback_manager(self):
+        return self._rollback_manager
 
     @property
     def task_decomposer(
@@ -429,9 +444,20 @@ class AgentRuntime:
                 step="Executing plan",
             )
 
+        self._rollback_manager.checkpoint(
+            state.metadata.copy(),
+        )
+
         evaluated_observations = self._execute_decision(
             decision,
             state,
+        )
+
+        self._audit_log.record(
+            action=decision.intent,
+            success=True,
+            approved=True,
+            details="Execution completed",
         )
 
         report = self._performance_engine.evaluate(

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from aura.ai.tool_runner import ToolRunner
+from aura.brain.audit_log import AuditLog
 from aura.brain.models import Decision, PlanStep
 from aura.brain.observation import Observation
 from aura.brain.permission_runtime import PermissionRuntime
+from aura.brain.safety_policy import SafetyPolicy
 from aura.brain.tool_recovery import ToolRecovery
 from aura.core.tool_result import ToolResult
 
@@ -18,10 +20,19 @@ class PlanExecutor:
         tool_runner: ToolRunner,
         permission_runtime: PermissionRuntime | None = None,
         recovery: ToolRecovery | None = None,
+        audit_log: AuditLog | None = None,
+        safety_policy: SafetyPolicy | None = None,
     ) -> None:
+
         self._tool_runner = tool_runner
+
         self._permission_runtime = permission_runtime or PermissionRuntime()
+
         self._recovery = recovery or ToolRecovery()
+
+        self._audit_log = audit_log or AuditLog()
+
+        self._safety_policy = safety_policy or SafetyPolicy()
 
     @property
     def tool_runner(
@@ -100,6 +111,26 @@ class PlanExecutor:
     ) -> ToolResult | None:
         """Execute a single plan step."""
 
+        safety = self._safety_policy.evaluate(
+            step.action,
+        )
+
+        if not safety.allowed:
+            self._audit_log.record(
+                action=step.action,
+                success=False,
+                approved=False,
+                details=safety.reason,
+            )
+
+            return ToolResult(
+                name=step.action,
+                output=None,
+                success=False,
+                error=safety.reason,
+                duration=0,
+            )
+
         if step.action is None:
             return None
 
@@ -132,6 +163,13 @@ class PlanExecutor:
                         timestamp=result.timestamp,
                         metadata=result.metadata | recovery_metadata,
                     )
+
+                self._audit_log.record(
+                    action=result.name,
+                    success=result.success,
+                    approved=True,
+                    details="Tool execution",
+                )
 
                 return result
 
