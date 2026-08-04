@@ -29,7 +29,10 @@ class TaskStore:
                 run_count INTEGER NOT NULL,
                 status TEXT NOT NULL DEFAULT 'pending',
                 result TEXT,
-                error TEXT
+                error TEXT,
+                retry_count INTEGER NOT NULL DEFAULT 0,
+                max_retries INTEGER NOT NULL DEFAULT 3,
+                next_retry TEXT
             )
             """)
 
@@ -53,9 +56,12 @@ class TaskStore:
                 run_count,
                 status,
                 result,
-                error
+                error,
+                retry_count,
+                max_retries,
+                next_retry                
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task.task_id,
@@ -67,6 +73,9 @@ class TaskStore:
                 task.status,
                 str(task.result) if task.result is not None else None,
                 task.error,
+                task.retry_count,
+                task.max_retries,
+                task.next_retry.isoformat() if task.next_retry else None,
             ),
         )
 
@@ -87,7 +96,10 @@ class TaskStore:
                 run_count,
                 status,
                 result,
-                error
+                error,
+                retry_count,
+                max_retries,
+                next_retry                
             FROM autonomous_tasks
             """)
 
@@ -111,6 +123,13 @@ class TaskStore:
             task.status = row[6]
             task.result = row[7]
             task.error = row[8]
+            task.retry_count = row[9]
+            task.max_retries = row[10]
+
+            if row[11]:
+                task.next_retry = datetime.fromisoformat(
+                    row[11],
+                )
 
             tasks.append(
                 task,

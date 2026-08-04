@@ -44,3 +44,33 @@ def test_task_store_persists_execution_state(tmp_path):
     assert tasks[0].status == "completed"
     assert tasks[0].result == "system ok"
     assert tasks[0].run_count == 5
+
+
+def test_task_store_persists_retry_state(tmp_path):
+
+    store = TaskStore(
+        str(tmp_path / "tasks.db"),
+    )
+
+    task = AutonomousTask(
+        description="retry backup",
+        interval=60,
+        max_retries=5,
+    )
+
+    task.retry_count = 2
+    task.schedule_retry(
+        delay=120,
+    )
+
+    store.save(task)
+
+    tasks = store.load_all()
+
+    loaded = tasks[0]
+
+    assert loaded.retry_count == 3
+
+    assert loaded.max_retries == 5
+
+    assert loaded.next_retry is not None
