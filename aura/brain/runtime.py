@@ -32,6 +32,8 @@ from aura.brain.task_scheduler import TaskScheduler
 from aura.brain.vision_controller import VisionController
 from aura.memory.base import Memory
 from aura.memory.consolidation import MemoryConsolidator
+from aura.memory.extractor import MemoryExtractor
+from aura.memory.long_term import LongTermMemory
 from aura.memory.optimization import MemoryOptimizer
 from aura.vision.memory import VisionMemory
 
@@ -99,6 +101,8 @@ class AgentRuntime:
         self._initiative_engine = InitiativeEngine()
         self._vision_controller = vision_controller or VisionController()
         self._vision_memory = vision_memory
+        self._long_term_memory = LongTermMemory()
+        self._memory_extractor = MemoryExtractor()
 
     @property
     def brain(
@@ -229,6 +233,11 @@ class AgentRuntime:
         return self._vision_memory
 
     @property
+    def long_term_memory(self):
+
+        return self._long_term_memory
+
+    @property
     def task_decomposer(
         self,
     ) -> TaskDecomposer:
@@ -318,6 +327,22 @@ class AgentRuntime:
             agent_context=agent_context,
             vision=vision,
         )
+
+        extracted = self._memory_extractor.extract(
+            user_message,
+        )
+
+        for item in extracted:
+            self._long_term_memory.remember(item)
+
+        state.metadata["long_term_memory"] = [
+            {
+                "type": item.memory_type.value,
+                "content": item.content,
+                "score": item.score(),
+            }
+            for item in self._long_term_memory.all()
+        ]
 
         state.decision = decision
         state.action = action
