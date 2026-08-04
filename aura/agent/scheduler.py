@@ -15,10 +15,10 @@ class Scheduler:
 
     def __init__(
         self,
-        store: TaskStore | None = None,
+        store=None,
     ) -> None:
         self._store = store
-        self._tasks: list[AutonomousTask] = []
+        self._tasks = []
 
         if self._store:
             self._tasks = self._store.load_all()
@@ -31,20 +31,28 @@ class Scheduler:
 
         return self._tasks
 
+    @property
+    def store(
+        self,
+    ) -> TaskStore | None:
+        """Return task store."""
+
+        return self._store
+
     def add(
         self,
         task: AutonomousTask,
     ) -> None:
         """Register autonomous task."""
 
-        self._tasks.append(
-            task,
-        )
-
         if self._store:
             self._store.save(
                 task,
             )
+
+        self._tasks.append(
+            task,
+        )
 
     def remove(
         self,

@@ -51,14 +51,29 @@ class BackgroundWorker:
                     result,
                 )
 
+                if self._scheduler.store:
+                    self._scheduler.store.save(
+                        task,
+                    )
+
             except Exception as exc:
                 if task.can_retry():
                     task.schedule_retry()
+
+                    if self._scheduler.store:
+                        self._scheduler.store.save(
+                            task,
+                        )
 
                 else:
                     task.mark_failed(
                         str(exc),
                     )
+
+                    if self._scheduler.store:
+                        self._scheduler.store.save(
+                            task,
+                        )
 
             executed += 1
 

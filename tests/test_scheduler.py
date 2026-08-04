@@ -1,5 +1,6 @@
 from aura.agent.autonomous_task import AutonomousTask
 from aura.agent.scheduler import Scheduler
+from aura.agent.task_store import TaskStore
 
 
 def test_scheduler_adds_tasks():
@@ -64,3 +65,25 @@ def test_scheduler_removes_task():
         )
         == 0
     )
+
+
+def test_scheduler_restores_tasks_from_store(tmp_path):
+
+    store = TaskStore(
+        str(tmp_path / "tasks.db"),
+    )
+
+    task = AutonomousTask(
+        "persistent check",
+        60,
+    )
+
+    store.save(task)
+
+    scheduler = Scheduler(
+        store,
+    )
+
+    assert len(scheduler.tasks) == 1
+
+    assert scheduler.tasks[0].description == "persistent check"
