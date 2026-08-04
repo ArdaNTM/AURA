@@ -183,6 +183,7 @@ class AgentRuntime:
     def run(
         self,
         user_message: str,
+        agent_context: dict[str, object] | None = None,
     ) -> AgentState:
         """Run one agent cycle."""
 
@@ -215,6 +216,7 @@ class AgentRuntime:
         decision, action = self._brain.think(
             user_message,
             memories=memories,
+            agent_context=agent_context,
         )
 
         state.decision = decision

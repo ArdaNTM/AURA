@@ -107,6 +107,7 @@ class Brain:
         self,
         user_message: str,
         memories: list[tuple[str, str]] | None = None,
+        agent_context: dict[str, object] | None = None,
     ) -> tuple[Decision, Action]:
         """Analyze a request and select an action."""
 
@@ -115,6 +116,8 @@ class Brain:
         )
 
         learning = {}
+        if agent_context:
+            learning["agent_experience"] = agent_context
         if self._user_profile:
             learning["user_profile"] = {
                 "preferences": self._user_profile.preferences,

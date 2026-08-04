@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from aura.agent.experience import AgentExperience
 from aura.brain.state import AgentState
 
 
@@ -14,6 +15,10 @@ class AgentExecutionState:
     last_state: AgentState | None = None
 
     history: list[AgentState] = field(
+        default_factory=list,
+    )
+
+    experiences: list[AgentExperience] = field(
         default_factory=list,
     )
 
