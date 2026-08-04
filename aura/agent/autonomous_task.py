@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 
@@ -31,6 +31,12 @@ class AutonomousTask:
 
     error: str | None = None
 
+    retry_count: int = 0
+
+    max_retries: int = 3
+
+    next_retry: datetime | None = None
+
     def should_run(
         self,
         now: datetime | None = None,
@@ -42,6 +48,12 @@ class AutonomousTask:
 
         if self.status == "running":
             return False
+
+        if self.next_retry:
+            current = now or datetime.now()
+
+            if current < self.next_retry:
+                return False
 
         if self.last_run is None:
             return True
@@ -84,6 +96,25 @@ class AutonomousTask:
         self.status = "pending"
 
         self.error = None
+
+    def can_retry(
+        self,
+    ) -> bool:
+        """Check whether retry is available."""
+
+        return self.retry_count < self.max_retries
+
+    def schedule_retry(
+        self,
+        delay: int = 60,
+    ) -> None:
+        """Schedule next retry attempt."""
+
+        self.retry_count += 1
+
+        self.next_retry = datetime.now() + timedelta(seconds=delay)
+
+        self.status = "pending"
 
     def mark_failed(
         self,

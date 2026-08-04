@@ -52,10 +52,13 @@ class BackgroundWorker:
                 )
 
             except Exception as exc:
+                if task.can_retry():
+                    task.schedule_retry()
 
-                task.mark_failed(
-                    str(exc),
-                )
+                else:
+                    task.mark_failed(
+                        str(exc),
+                    )
 
             executed += 1
 
