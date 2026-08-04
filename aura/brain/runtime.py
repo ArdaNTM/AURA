@@ -24,6 +24,7 @@ from aura.brain.permission_request import PermissionRequest
 from aura.brain.permission_service import PermissionService
 from aura.brain.reflection_engine import ReflectionEngine
 from aura.brain.self_evaluation_engine import SelfEvaluationEngine
+from aura.brain.self_improvement import SelfImprovementEngine
 from aura.brain.state import AgentState
 from aura.brain.task_decomposer import TaskDecomposer
 from aura.brain.task_graph import TaskGraph
@@ -65,6 +66,7 @@ class AgentRuntime:
         task_decomposer: TaskDecomposer | None = None,
         vision_controller: VisionController | None = None,
         vision_memory: VisionMemory | None = None,
+        self_improvement_engine=None,
     ) -> None:
         self._brain = brain
         self._executor = executor
@@ -103,6 +105,9 @@ class AgentRuntime:
         self._vision_memory = vision_memory
         self._long_term_memory = LongTermMemory()
         self._memory_extractor = MemoryExtractor()
+        self._self_improvement_engine = (
+            self_improvement_engine or SelfImprovementEngine()
+        )
 
     @property
     def brain(
@@ -661,7 +666,29 @@ class AgentRuntime:
                 evaluated,
                 decision=state.decision,
             )
+            improvement_report = self._self_improvement_engine.analyze(
+                success=reflection.success,
+                strategy=decision.strategy,
+                confidence=decision.confidence,
+                reflection=reflection.summary,
+            )
 
+            state.metadata["self_improvement"] = {
+                "success": improvement_report.success,
+                "strategy_change": improvement_report.strategy_change,
+                "suggestions": [
+                    {
+                        "area": item.area,
+                        "problem": item.problem,
+                        "suggestion": item.suggestion,
+                        "confidence_change": item.confidence_change,
+                        "priority": item.priority,
+                    }
+                    for item in improvement_report.suggestions
+                ],
+            }
+
+            self._learning_profile.register_improvement_feedback(improvement_report)
             decision.outcome = {
                 "success": reflection.success,
                 "strategy": decision.strategy,

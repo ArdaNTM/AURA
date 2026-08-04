@@ -342,6 +342,22 @@ class Planner:
             learning=context.learning,
         )
 
+        if context.learning:
+            improvements = context.learning.get(
+                "improvement_history",
+                [],
+            )
+
+            if improvements:
+                latest = improvements[-1]
+
+                preferred_strategy = latest.get(
+                    "strategy_change",
+                )
+
+                if preferred_strategy:
+                    decision.metadata["preferred_strategy"] = preferred_strategy
+
         if context.vision:
             decision.metadata["vision"] = context.vision
 

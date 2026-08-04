@@ -119,6 +119,9 @@ class Brain:
         )
 
         learning = {}
+        if self._learning_profile:
+
+            learning["improvement_history"] = self._learning_profile.improvement_history
         if agent_context:
             learning["agent_experience"] = agent_context
         if self._user_profile:

@@ -55,6 +55,9 @@ class LearningProfile:
     improvement_validator: ImprovementValidator = field(
         default_factory=ImprovementValidator,
     )
+    improvement_history: list[dict[str, object]] = field(
+        default_factory=list,
+    )
 
     @property
     def success_rate(
@@ -325,4 +328,29 @@ class LearningProfile:
         return self.improvement_validator.validate(
             change_type,
             description,
+        )
+
+    def register_improvement_feedback(
+        self,
+        improvement_report,
+    ) -> None:
+        """Register self improvement feedback."""
+
+        entry = {
+            "success": improvement_report.success,
+            "strategy_change": improvement_report.strategy_change,
+            "suggestions": [
+                {
+                    "area": item.area,
+                    "problem": item.problem,
+                    "suggestion": item.suggestion,
+                    "confidence_change": item.confidence_change,
+                    "priority": item.priority,
+                }
+                for item in improvement_report.suggestions
+            ],
+        }
+
+        self.improvement_history.append(
+            entry,
         )
