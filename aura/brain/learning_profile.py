@@ -59,6 +59,8 @@ class LearningProfile:
         default_factory=list,
     )
 
+    last_improvement_strategy: str | None = None
+
     @property
     def success_rate(
         self,
@@ -85,22 +87,25 @@ class LearningProfile:
             self.failed_tasks += 1
 
         if strategy:
-            self.strategy_usage[strategy] = (
-                self.strategy_usage.get(
-                    strategy,
-                    0,
-                )
-                + 1
-            )
-
-            if success:
-                self.strategy_success[strategy] = (
-                    self.strategy_success.get(
+            if self.last_improvement_strategy == strategy:
+                self.last_improvement_strategy = None
+            else:
+                self.strategy_usage[strategy] = (
+                    self.strategy_usage.get(
                         strategy,
                         0,
                     )
                     + 1
                 )
+
+                if success:
+                    self.strategy_success[strategy] = (
+                        self.strategy_success.get(
+                            strategy,
+                            0,
+                        )
+                        + 1
+                    )
 
     def register_confidence(
         self,
@@ -351,6 +356,34 @@ class LearningProfile:
             ],
         }
 
+        if not hasattr(
+            self,
+            "improvement_history",
+        ):
+            self.improvement_history = []
+
         self.improvement_history.append(
             entry,
         )
+
+        strategy = improvement_report.strategy_change
+
+        if strategy:
+            self.strategy_usage[strategy] = (
+                self.strategy_usage.get(
+                    strategy,
+                    0,
+                )
+                + 1
+            )
+
+            if improvement_report.success:
+                self.strategy_success[strategy] = (
+                    self.strategy_success.get(
+                        strategy,
+                        0,
+                    )
+                    + 1
+                )
+
+            self.last_improvement_strategy = strategy

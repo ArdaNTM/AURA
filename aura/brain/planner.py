@@ -337,26 +337,37 @@ class Planner:
     ) -> Decision:
         """Analyze request using full decision context."""
 
-        decision = self.decide(
-            context.user_message,
-            learning=context.learning,
+        learning = context.learning or {}
+
+        improvements = learning.get(
+            "improvement_history",
+            [],
         )
 
-        if context.learning:
-            improvements = context.learning.get(
-                "improvement_history",
-                [],
+        preferred_strategy = None
+
+        if improvements:
+
+            latest = improvements[-1]
+
+            preferred_strategy = latest.get(
+                "strategy_change",
             )
 
-            if improvements:
-                latest = improvements[-1]
+            if preferred_strategy:
 
-                preferred_strategy = latest.get(
-                    "strategy_change",
-                )
+                learning["preferred_strategy"] = preferred_strategy
 
-                if preferred_strategy:
-                    decision.metadata["preferred_strategy"] = preferred_strategy
+                learning["strategy_confidence"] = 0.9
+
+        decision = self.decide(
+            context.user_message,
+            learning=learning,
+        )
+
+        if preferred_strategy:
+
+            decision.metadata["improvement_strategy"] = preferred_strategy
 
         if context.vision:
             decision.metadata["vision"] = context.vision

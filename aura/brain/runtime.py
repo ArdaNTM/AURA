@@ -688,7 +688,11 @@ class AgentRuntime:
                 ],
             }
 
-            self._learning_profile.register_improvement_feedback(improvement_report)
+            if self._learning_profile:
+
+                self._learning_profile.register_improvement_feedback(
+                    improvement_report,
+                )
             decision.outcome = {
                 "success": reflection.success,
                 "strategy": decision.strategy,
