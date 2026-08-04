@@ -36,15 +36,26 @@ class BackgroundWorker:
 
         for task in self._scheduler.pending():
 
-            result = self._agent_loop.run(
-                task.description,
-            )
+            task.mark_running()
 
-            self._results.append(
-                result,
-            )
+            try:
+                result = self._agent_loop.run(
+                    task.description,
+                )
 
-            task.mark_completed()
+                self._results.append(
+                    result,
+                )
+
+                task.mark_completed(
+                    result,
+                )
+
+            except Exception as exc:
+
+                task.mark_failed(
+                    str(exc),
+                )
 
             executed += 1
 

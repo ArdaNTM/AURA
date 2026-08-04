@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from aura.agent.autonomous_task import AutonomousTask
+
+if TYPE_CHECKING:
+    from aura.agent.task_store import TaskStore
 
 
 class Scheduler:
     """Manage autonomous tasks."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        store: TaskStore | None = None,
+    ) -> None:
+        self._store = store
         self._tasks: list[AutonomousTask] = []
+
+        if self._store:
+            self._tasks = self._store.load_all()
 
     @property
     def tasks(
@@ -29,6 +41,11 @@ class Scheduler:
             task,
         )
 
+        if self._store:
+            self._store.save(
+                task,
+            )
+
     def remove(
         self,
         task_id: str,
@@ -36,12 +53,20 @@ class Scheduler:
         """Remove task."""
 
         for task in self._tasks:
-            if task.task_id == task_id:
-                self._tasks.remove(
-                    task,
+
+            if task.task_id != task_id:
+                continue
+
+            self._tasks.remove(
+                task,
+            )
+
+            if self._store:
+                self._store.delete(
+                    task_id,
                 )
 
-                return True
+            return True
 
         return False
 

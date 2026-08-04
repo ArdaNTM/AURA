@@ -17,13 +17,86 @@ class FakeAgentLoop:
 
         return "done"
 
+    def test_background_worker_executes_pending_tasks():
 
-def test_background_worker_executes_pending_tasks():
+        scheduler = Scheduler()
+
+        task = AutonomousTask(
+            "check system",
+            60,
+        )
+
+        scheduler.add(
+            task,
+        )
+
+        agent = FakeAgentLoop()
+
+        worker = BackgroundWorker(
+            scheduler,
+            agent,
+        )
+
+        count = worker.run_pending()
+
+        assert count == 1
+
+        assert agent.messages == [
+            "check system",
+        ]
+
+        assert task.run_count == 1
+
+    class FailingAgentLoop:
+        def run(
+            self,
+            message: str,
+        ):
+            raise RuntimeError("boom")
+
+    def test_background_worker_handles_failure():
+
+        scheduler = Scheduler()
+
+        task = AutonomousTask(
+            "fail task",
+            60,
+        )
+
+        scheduler.add(
+            task,
+        )
+
+        worker = BackgroundWorker(
+            scheduler,
+            FailingAgentLoop(),
+        )
+
+        count = worker.run_pending()
+
+        assert count == 1
+
+        assert task.status == "failed"
+
+        assert task.error == "boom"
+
+        assert task.run_count == 1
+
+
+class FailingAgentLoop:
+    def run(
+        self,
+        message: str,
+    ):
+        raise RuntimeError("boom")
+
+
+def test_background_worker_handles_failure():
 
     scheduler = Scheduler()
 
     task = AutonomousTask(
-        "check system",
+        "fail task",
         60,
     )
 
@@ -31,19 +104,17 @@ def test_background_worker_executes_pending_tasks():
         task,
     )
 
-    agent = FakeAgentLoop()
-
     worker = BackgroundWorker(
         scheduler,
-        agent,
+        FailingAgentLoop(),
     )
 
     count = worker.run_pending()
 
     assert count == 1
 
-    assert agent.messages == [
-        "check system",
-    ]
+    assert task.status == "failed"
+
+    assert task.error == "boom"
 
     assert task.run_count == 1
