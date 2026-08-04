@@ -13,15 +13,19 @@ class RollbackManager:
         self,
         state,
     ):
-        self._snapshots.append(
-            state,
-        )
+        self._snapshots.append(state.copy() if hasattr(state, "copy") else state)
 
     def rollback(self):
+
         if not self._snapshots:
             return None
 
         return self._snapshots.pop()
 
+    def has_snapshot(self):
+
+        return bool(self._snapshots)
+
     def clear(self):
+
         self._snapshots.clear()

@@ -14,6 +14,7 @@ from aura.brain.goal import Goal
 from aura.brain.goal_manager import GoalManager
 from aura.brain.improvement import ImprovementPlan
 from aura.brain.improvement_evaluator import ImprovementEvaluator
+from aura.brain.improvement_monitor import ImprovementMonitor
 from aura.brain.initiative_engine import InitiativeEngine
 from aura.brain.learning_profile import LearningProfile
 from aura.brain.learning_profile_store import LearningProfileStore
@@ -71,6 +72,7 @@ class AgentRuntime:
         self_improvement_engine=None,
         audit_log: AuditLog | None = None,
         rollback_manager: RollbackManager | None = None,
+        improvement_monitor: ImprovementMonitor | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
@@ -113,8 +115,8 @@ class AgentRuntime:
             self_improvement_engine or SelfImprovementEngine()
         )
         self._audit_log = audit_log or AuditLog()
-
         self._rollback_manager = rollback_manager or RollbackManager()
+        self._improvement_monitor = improvement_monitor or ImprovementMonitor()
 
     @property
     def brain(
@@ -256,6 +258,12 @@ class AgentRuntime:
     @property
     def rollback_manager(self):
         return self._rollback_manager
+
+    @property
+    def improvement_monitor(
+        self,
+    ):
+        return self._improvement_monitor
 
     @property
     def task_decomposer(
@@ -478,13 +486,32 @@ class AgentRuntime:
 
             if allowed:
 
-                self._learning_profile.register_improvement(
+                approved = self._improvement_monitor.record(
                     strategy=decision.strategy,
                     before_score=previous_score,
                     after_score=report.performance_score,
-                    success=report.performance_score >= previous_score,
-                    notes=("Autonomous improvement feedback"),
                 )
+
+                if approved:
+
+                    self._learning_profile.register_improvement(
+                        strategy=decision.strategy,
+                        before_score=previous_score,
+                        after_score=report.performance_score,
+                        success=True,
+                        notes=("Autonomous improvement validated"),
+                    )
+
+                else:
+
+                    self._rollback_manager.rollback()
+
+                    self._audit_log.record(
+                        action="improvement_rollback",
+                        success=False,
+                        approved=False,
+                        details=("Regression detected after improvement"),
+                    )
 
         self_evaluation = self._self_evaluation_engine.evaluate(
             self._learning_profile,

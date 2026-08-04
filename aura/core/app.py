@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from aura.agent.agent import Agent
 from aura.ai.factory import ProviderFactory
 from aura.ai.manager import AIManager
 from aura.ai.tool_runner import ToolRunner
@@ -32,6 +33,7 @@ from aura.tools import (
     ScreenCaptureTool,
     SearchTool,
 )
+from aura.ui.aura_shell import AuraShell
 from aura.ui.cli import CLI
 
 
@@ -240,7 +242,17 @@ class AuraApplication:
             CommandRouter,
         )
 
-        self.cli = cli or CLI()
+        self.cli = cli
+
+        self.agent = Agent(
+            self.container.resolve(
+                AgentRuntime,
+            )
+        )
+
+        self.shell = AuraShell(
+            self.agent,
+        )
 
     def startup(self) -> None:
         """Initialize application resources."""
@@ -261,10 +273,15 @@ class AuraApplication:
         self.startup()
 
         try:
-            self.cli.start(
-                self.settings,
-                self.router,
-            )
+
+            if self.cli is not None:
+                self.cli.start(
+                    self.settings,
+                    self.router,
+                )
+
+            else:
+                self.shell.start()
 
         except KeyboardInterrupt:
             self.logger.info(
