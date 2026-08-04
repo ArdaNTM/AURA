@@ -10,8 +10,10 @@ from aura.brain.execution_guard import ExecutionGuard
 from aura.brain.execution_plan import ExecutionPlan
 from aura.brain.executor import PlanExecutor
 from aura.brain.goal import Goal
+from aura.brain.goal_manager import GoalManager
 from aura.brain.improvement import ImprovementPlan
 from aura.brain.improvement_evaluator import ImprovementEvaluator
+from aura.brain.initiative_engine import InitiativeEngine
 from aura.brain.learning_profile import LearningProfile
 from aura.brain.learning_profile_store import LearningProfileStore
 from aura.brain.memory_policy import MemoryPolicy
@@ -23,10 +25,15 @@ from aura.brain.permission_service import PermissionService
 from aura.brain.reflection_engine import ReflectionEngine
 from aura.brain.self_evaluation_engine import SelfEvaluationEngine
 from aura.brain.state import AgentState
+from aura.brain.task_decomposer import TaskDecomposer
+from aura.brain.task_graph import TaskGraph
 from aura.brain.task_memory import TaskMemory
+from aura.brain.task_scheduler import TaskScheduler
+from aura.brain.vision_controller import VisionController
 from aura.memory.base import Memory
 from aura.memory.consolidation import MemoryConsolidator
 from aura.memory.optimization import MemoryOptimizer
+from aura.vision.memory import VisionMemory
 
 
 class AgentRuntime:
@@ -52,6 +59,10 @@ class AgentRuntime:
         memory_consolidator: MemoryConsolidator | None = None,
         memory_optimizer: MemoryOptimizer | None = None,
         improvement_evaluator: ImprovementEvaluator | None = None,
+        goal_manager: GoalManager | None = None,
+        task_decomposer: TaskDecomposer | None = None,
+        vision_controller: VisionController | None = None,
+        vision_memory: VisionMemory | None = None,
     ) -> None:
         self._brain = brain
         self._executor = executor
@@ -60,6 +71,7 @@ class AgentRuntime:
         self._memory_consolidator = memory_consolidator or MemoryConsolidator()
         self._memory_optimizer = memory_optimizer or MemoryOptimizer()
         self._task_memory = task_memory
+        self._task_decomposer = task_decomposer or TaskDecomposer()
 
         if self._task_memory is None and memory:
             self._task_memory = TaskMemory(
@@ -83,6 +95,10 @@ class AgentRuntime:
             self._learning_profile = self._learning_profile_store.load()
         else:
             self._learning_profile = learning_profile
+        self._goal_manager = goal_manager or GoalManager()
+        self._initiative_engine = InitiativeEngine()
+        self._vision_controller = vision_controller or VisionController()
+        self._vision_memory = vision_memory
 
     @property
     def brain(
@@ -180,6 +196,44 @@ class AgentRuntime:
 
         return self._improvement_evaluator
 
+    @property
+    def goal_manager(
+        self,
+    ) -> GoalManager:
+        """Return goal manager."""
+
+        return self._goal_manager
+
+    @property
+    def initiative_engine(
+        self,
+    ) -> InitiativeEngine:
+        """Return initiative engine."""
+
+        return self._initiative_engine
+
+    @property
+    def vision_controller(
+        self,
+    ) -> VisionController:
+        """Return vision controller."""
+
+        return self._vision_controller
+
+    @property
+    def vision_memory(
+        self,
+    ) -> VisionMemory | None:
+        """Return vision memory."""
+
+        return self._vision_memory
+
+    @property
+    def task_decomposer(
+        self,
+    ) -> TaskDecomposer:
+        return self._task_decomposer
+
     def run(
         self,
         user_message: str,
@@ -187,8 +241,8 @@ class AgentRuntime:
     ) -> AgentState:
         """Run one agent cycle."""
 
-        goal = Goal(
-            description=user_message,
+        goal = self._goal_manager.create_goal(
+            user_message,
         )
 
         task = BackgroundTask(
@@ -203,20 +257,66 @@ class AgentRuntime:
         )
 
         memories = []
+        vision_memories = []
 
-        if self._memory:
-            memories = self._memory.search(
+        if self._vision_memory:
+            vision_memories = self._vision_memory.recall(
                 user_message,
             )
+
+            memories.extend(
+                vision_memories,
+            )
+        vision = None
+
+        try:
+            vision_result = self._vision_controller.observe()
+
+            vision = {
+                "description": vision_result.description,
+                "objects": vision_result.objects,
+                "confidence": vision_result.confidence,
+                "text": vision_result.text,
+                "regions": vision_result.regions,
+                "elements": [
+                    {
+                        "name": element.name,
+                        "type": element.type,
+                        "confidence": element.confidence,
+                        "coordinates": {
+                            "x": element.x,
+                            "y": element.y,
+                        },
+                    }
+                    for element in vision_result.elements
+                ],
+                "metadata": vision_result.metadata,
+            }
+
+        except Exception as error:
+            vision = {
+                "error": str(error),
+                "confidence": 0.0,
+            }
 
         state.metadata["memory_count"] = len(
             memories,
         )
+        state.metadata["vision"] = vision
+
+        if self._vision_memory and vision_result:
+            self._vision_memory.store(
+                vision_result,
+                context=user_message,
+            )
+
+            state.metadata["vision_memory"] = True
 
         decision, action = self._brain.think(
             user_message,
             memories=memories,
             agent_context=agent_context,
+            vision=vision,
         )
 
         state.decision = decision
@@ -349,7 +449,18 @@ class AgentRuntime:
             "best_strategy": self_evaluation.best_strategy,
             "recommendations": self_evaluation.recommendations,
         }
+        initiative = self._initiative_engine.create(
+            self_evaluation,
+        )
 
+        if initiative:
+
+            state.metadata["initiative"] = {
+                "reason": initiative.reason,
+                "task": initiative.task,
+                "priority": initiative.priority,
+                "strategy": initiative.strategy,
+            }
         self._learning_profile_store.save(
             self._learning_profile,
         )
@@ -359,13 +470,45 @@ class AgentRuntime:
         }
 
         if decision:
-            execution_plan = ExecutionPlan(
-                goal=goal.description,
-                steps=decision.plan,
+
+            execution_plan = self._task_decomposer.decompose(
+                goal,
             )
 
             state.set_execution_plan(
                 execution_plan,
+            )
+
+            graph = TaskGraph()
+
+            previous_task_id = None
+
+            for step in execution_plan.steps:
+                task_id = graph.add_task(
+                    step.description,
+                )
+
+                if previous_task_id:
+                    graph.add_dependency(
+                        task_id,
+                        previous_task_id,
+                    )
+
+                previous_task_id = task_id
+
+            scheduler = TaskScheduler(
+                graph,
+            )
+
+            state.task_graph = graph
+            state.task_scheduler = scheduler
+
+            scheduler = self._build_scheduler(
+                execution_plan,
+            )
+
+            state.set_scheduler(
+                scheduler,
             )
 
             state.metadata["intent"] = decision.intent
@@ -378,7 +521,10 @@ class AgentRuntime:
                 "completed_steps": execution_plan.completed_steps,
                 "is_complete": execution_plan.is_complete(),
             }
-
+            state.metadata["task_graph"] = {
+                "tasks": len(graph.nodes),
+                "available": len(graph.next_available()),
+            }
             self._apply_improvement_plan(
                 state,
                 decision,
@@ -407,6 +553,11 @@ class AgentRuntime:
         state.metadata["observation_count"] = len(
             evaluated_observations,
         )
+
+        if state.goal:
+            self._goal_manager.complete_goal(
+                state.goal.goal_id,
+            )
 
         if state.background_task:
             state.background_task.complete()
@@ -556,6 +707,34 @@ class AgentRuntime:
 
         return evaluated_observations
 
+    def _build_scheduler(
+        self,
+        execution_plan: ExecutionPlan,
+    ) -> TaskScheduler:
+        """Create dependency graph from execution plan."""
+
+        graph = TaskGraph()
+
+        previous = None
+
+        for step in execution_plan.steps:
+
+            task_id = graph.add_task(
+                step.description,
+            )
+
+            if previous:
+                graph.add_dependency(
+                    task_id,
+                    previous,
+                )
+
+            previous = task_id
+
+        return TaskScheduler(
+            graph,
+        )
+
     def _apply_improvement_plan(
         self,
         state: AgentState,
@@ -666,3 +845,30 @@ class AgentRuntime:
                 role,
                 content,
             )
+
+    def _create_task_scheduler(
+        self,
+        execution_plan: ExecutionPlan,
+    ) -> TaskScheduler:
+
+        graph = TaskGraph()
+
+        previous = None
+
+        for step in execution_plan.steps:
+
+            task_id = graph.add_task(
+                step.description,
+            )
+
+            if previous:
+                graph.add_dependency(
+                    task_id,
+                    previous,
+                )
+
+            previous = task_id
+
+        return TaskScheduler(
+            graph,
+        )

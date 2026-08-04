@@ -17,6 +17,14 @@ class SelfEvaluation:
 
     best_strategy: str | None = None
 
+    diagnosis: list[str] = field(
+        default_factory=list,
+    )
+
+    improvement_actions: list[str] = field(
+        default_factory=list,
+    )
+
     recommendations: list[str] = field(
         default_factory=list,
     )

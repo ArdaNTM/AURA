@@ -337,10 +337,15 @@ class Planner:
     ) -> Decision:
         """Analyze request using full decision context."""
 
-        return self.decide(
+        decision = self.decide(
             context.user_message,
             learning=context.learning,
         )
+
+        if context.vision:
+            decision.metadata["vision"] = context.vision
+
+        return decision
 
     def _build_calculation(
         self,

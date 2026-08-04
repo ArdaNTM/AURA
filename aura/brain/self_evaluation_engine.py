@@ -32,23 +32,62 @@ class SelfEvaluationEngine:
                 key=profile.skill_scores.get,
             )
 
-        best_strategy = profile.best_strategy()
+        diagnosis = []
+
+        actions = []
 
         recommendations = []
 
         if performance.performance_score < 0.5:
-            recommendations.append(
+            diagnosis.append(
+                "Execution performance is below target.",
+            )
+
+            actions.append(
                 "Improve execution reliability.",
             )
 
-        if profile.confidence_error > 0.35:
             recommendations.append(
-                "Reduce confidence calibration error.",
+                "Use safer execution strategy.",
+            )
+
+        if performance.retry_rate > 0.3:
+            diagnosis.append(
+                "Too many retries detected.",
+            )
+
+            actions.append(
+                "Analyze failure causes before retry.",
+            )
+
+        if profile.confidence_error > 0.35:
+            diagnosis.append(
+                "Confidence calibration is inaccurate.",
+            )
+
+            actions.append(
+                "Adjust confidence threshold.",
+            )
+
+            recommendations.append(
+                "Verify uncertain decisions.",
             )
 
         if weakest_skill:
-            recommendations.append(
+
+            diagnosis.append(
+                f"Weak skill detected: {weakest_skill}",
+            )
+
+            actions.append(
                 f"Improve skill: {weakest_skill}",
+            )
+
+        best_strategy = profile.best_strategy()
+
+        if best_strategy:
+            recommendations.append(
+                f"Prefer successful strategy: {best_strategy}",
             )
 
         return SelfEvaluation(
@@ -56,5 +95,7 @@ class SelfEvaluationEngine:
             strongest_skill=strongest_skill,
             weakest_skill=weakest_skill,
             best_strategy=best_strategy,
+            diagnosis=diagnosis,
+            improvement_actions=actions,
             recommendations=recommendations,
         )

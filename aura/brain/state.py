@@ -13,6 +13,8 @@ from aura.brain.models import Decision
 from aura.brain.observation import Observation
 from aura.brain.permission_request import PermissionRequest
 from aura.brain.reflection import Reflection
+from aura.brain.task_graph import TaskGraph
+from aura.brain.task_scheduler import TaskScheduler
 
 
 @dataclass
@@ -28,6 +30,12 @@ class AgentState:
     action: Action | None = None
 
     execution_plan: ExecutionPlan | None = None
+
+    task_graph: TaskGraph | None = None
+
+    task_scheduler: TaskScheduler | None = None
+
+    scheduler: TaskScheduler | None = None
 
     observations: list[Observation] = field(
         default_factory=list,
@@ -110,3 +118,11 @@ class AgentState:
             return None
 
         return observation.output
+
+    def set_scheduler(
+        self,
+        scheduler: TaskScheduler,
+    ) -> None:
+        """Store task scheduler."""
+
+        self.scheduler = scheduler

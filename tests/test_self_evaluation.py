@@ -57,3 +57,24 @@ def test_self_evaluation_detects_skill_strength():
     assert result.strongest_skill == "calculation"
 
     assert result.weakest_skill == "coding"
+
+
+def test_self_evaluation_detects_performance_problem():
+
+    profile = LearningProfile()
+
+    report = PerformanceReport(
+        success_rate=0.3,
+        average_score=0.3,
+        retry_rate=0.5,
+        performance_score=0.3,
+    )
+
+    result = SelfEvaluationEngine().evaluate(
+        profile,
+        report,
+    )
+
+    assert "Execution performance is below target." in result.diagnosis
+
+    assert "Improve execution reliability." in result.improvement_actions

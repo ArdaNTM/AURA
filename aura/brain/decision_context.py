@@ -30,6 +30,10 @@ class DecisionContext:
         default_factory=dict,
     )
 
+    vision: dict[str, object] = field(
+        default_factory=dict,
+    )
+
     permissions: dict[str, bool] = field(
         default_factory=dict,
     )

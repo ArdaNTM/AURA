@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from aura.agent.autonomous_task import AutonomousTask
 from aura.agent.experience import AgentExperience
 from aura.agent.memory_loop import AgentMemoryLoop
+from aura.agent.scheduler import Scheduler
 from aura.agent.state import AgentExecutionState
 from aura.brain.runtime import AgentRuntime
 
@@ -19,6 +21,8 @@ class AgentLoop:
         self.state = AgentExecutionState()
 
         self.memory = AgentMemoryLoop()
+
+        self.scheduler = Scheduler()
 
     @property
     def memory_context(
@@ -39,7 +43,23 @@ class AgentLoop:
         self.state.update(
             result,
         )
+        initiative = result.metadata.get(
+            "initiative",
+        )
 
+        if isinstance(
+            initiative,
+            dict,
+        ):
+
+            task = AutonomousTask(
+                description=initiative["task"],
+                interval=3600,
+            )
+
+            self.scheduler.add(
+                task,
+            )
         experience = AgentExperience(
             task=message,
             success=result.completed,

@@ -8,6 +8,7 @@ from aura.computer.screen import ScreenCapture
 from aura.core.tool_result import ToolResult
 from aura.core.tools import Tool
 from aura.vision.analyzer import VisionAnalyzer
+from aura.vision.interpreter import VisionInterpreter
 
 
 class ScreenCaptureTool(Tool):
@@ -17,9 +18,14 @@ class ScreenCaptureTool(Tool):
         self,
         capture: ScreenCapture | None = None,
         analyzer: VisionAnalyzer | None = None,
+        interpreter: VisionInterpreter | None = None,
     ) -> None:
+
         self._capture = capture or ScreenCapture()
+
         self._analyzer = analyzer or VisionAnalyzer()
+
+        self._interpreter = interpreter or VisionInterpreter()
 
     @property
     def name(
@@ -94,6 +100,9 @@ class ScreenCaptureTool(Tool):
             result = self._analyzer.analyze(
                 image_path,
             )
+            interpretation = self._interpreter.interpret(
+                result,
+            )
 
             return ToolResult(
                 name=self.name,
@@ -118,6 +127,7 @@ class ScreenCaptureTool(Tool):
                             for element in result.elements
                         ],
                         "metadata": result.metadata,
+                        "interpretation": interpretation,
                     },
                 },
             )

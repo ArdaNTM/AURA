@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from aura.brain.context_fusion import ContextFusion
 from aura.brain.decision import Action, DecisionEngine
 from aura.brain.decision_context import DecisionContext
 from aura.brain.goal import Goal
@@ -49,6 +50,7 @@ class Brain:
             learning_profile=learning_profile,
         )
         self._decision_engine = decision_engine or DecisionEngine()
+        self._context_fusion = ContextFusion()
 
     @property
     def planner(self) -> Planner:
@@ -108,6 +110,7 @@ class Brain:
         user_message: str,
         memories: list[tuple[str, str]] | None = None,
         agent_context: dict[str, object] | None = None,
+        vision: dict[str, object] | None = None,
     ) -> tuple[Decision, Action]:
         """Analyze a request and select an action."""
 
@@ -245,16 +248,28 @@ class Brain:
                     strategy_scores.values(),
                 )
 
+        fusion_context = self._context_fusion.fuse(
+            memory=memories,
+            vision=vision,
+            user_profile=learning.get("user_profile"),
+            learning=learning,
+        )
+
+        learning["multimodal_fusion"] = fusion_context
+
         context = self.create_context(
             user_message,
             goal,
             learning,
             memories,
+            vision,
         )
 
         decision = self._planner.decide_with_context(
             context,
         )
+
+        decision.metadata["multimodal_context"] = fusion_context
 
         if self._learning_profile:
             strongest_skill = self._learning_profile.skill_registry.strongest()
@@ -323,6 +338,7 @@ class Brain:
         goal: Goal,
         learning: dict[str, object] | None = None,
         memories: list[tuple[str, str]] | None = None,
+        vision: dict[str, object] | None = None,
     ) -> DecisionContext:
         """Create decision context."""
 
@@ -332,6 +348,7 @@ class Brain:
             learning=learning or {},
             memory=memories or [],
             user_profile=self._user_profile,
+            vision=vision or {},
             metadata={
                 "goal_description": goal.description,
             },

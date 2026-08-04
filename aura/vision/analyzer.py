@@ -1,11 +1,18 @@
 from pathlib import Path
 
+from aura.vision.element_detector import ElementDetector
 from aura.vision.models import VisionResult
 from PIL import Image
 
 
 class VisionAnalyzer:
     """Analyze captured screens."""
+
+    def __init__(
+        self,
+        detector: ElementDetector | None = None,
+    ):
+        self._detector = detector or ElementDetector()
 
     def analyze(
         self,
@@ -40,7 +47,9 @@ class VisionAnalyzer:
                 confidence=0.5,
                 text=[],
                 regions=[],
-                elements=[],
+                elements=self._detector.detect(
+                    str(path),
+                ),
                 metadata={
                     "image_path": str(path),
                     "exists": True,
